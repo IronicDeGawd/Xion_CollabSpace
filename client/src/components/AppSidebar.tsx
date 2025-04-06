@@ -17,8 +17,6 @@ import {
   Lightbulb,
   User,
   LayoutDashboard,
-  MessageSquare,
-  Settings,
   ExternalLink,
   GitBranch,
 } from "lucide-react";
@@ -65,8 +63,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="py-4">
         <div className="flex items-center justify-center">
-          <GitBranch className="h-8 w-8 text-primary" />
-          <span className="ml-2 text-xl font-bold gradient-text">
+          <GitBranch className="h-6 w-6 text-primary" />
+          <span className="ml-2 text-xl font-bold text-primary">
             CollabSpace
           </span>
         </div>
@@ -83,13 +81,17 @@ export function AppSidebar() {
                     <Link
                       to={item.path}
                       className={cn(
-                        "flex items-center gap-2 py-2",
-                        location.pathname === item.path &&
-                          "text-primary font-medium"
+                        "flex items-center gap-2 py-2 px-4 rounded-md transition-all",
+                        location.pathname === item.path
+                          ? "text-primary font-medium bg-primary/10"
+                          : "hover:bg-primary/5"
                       )}
                     >
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
+                      {location.pathname === item.path && (
+                        <div className="absolute left-0 w-1 h-full bg-primary rounded-r-md" />
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -109,13 +111,17 @@ export function AppSidebar() {
                       <Link
                         to={item.path}
                         className={cn(
-                          "flex items-center gap-2 py-2",
-                          location.pathname === item.path &&
-                            "text-primary font-medium"
+                          "flex items-center gap-2 py-2 px-4 rounded-md transition-all",
+                          location.pathname === item.path
+                            ? "text-primary font-medium bg-primary/10"
+                            : "hover:bg-primary/5"
                         )}
                       >
                         <item.icon className="h-5 w-5" />
                         <span>{item.title}</span>
+                        {location.pathname === item.path && (
+                          <div className="absolute left-0 w-1 h-full bg-primary rounded-r-md" />
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -127,7 +133,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="py-4">
-        <div className="px-4 space-y-4">
+        <div className="px-4">
           <Button
             variant="outline"
             className="w-full flex items-center gap-2"

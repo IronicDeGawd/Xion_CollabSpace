@@ -1,156 +1,106 @@
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 
-// Define proper interface for form data
-interface RegistrationFormData {
+// Changed the interface to use string for skills
+export interface RegistrationFormData {
   name: string;
   email: string;
-  skills: string[];
+  skills: string; // Changed from string[] to string
 }
 
 interface RegistrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   formData: RegistrationFormData;
-  setFormData: (data: RegistrationFormData) => void;
-  onSubmit: () => void;
+  setFormData: React.Dispatch<React.SetStateAction<RegistrationFormData>>;
+  onSubmit: (e: React.FormEvent) => void;
   address: string;
 }
 
-export default function RegistrationDialog({
+const RegistrationDialog: React.FC<RegistrationDialogProps> = ({
   open,
   onOpenChange,
   formData,
   setFormData,
   onSubmit,
   address,
-}: RegistrationDialogProps) {
-  const [newSkill, setNewSkill] = useState("");
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const addSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
-      setFormData({
-        ...formData,
-        skills: [...formData.skills, newSkill.trim()],
-      });
-      setNewSkill("");
-    }
-  };
-
-  const removeSkill = (skill: string) => {
-    setFormData({
-      ...formData,
-      skills: formData.skills.filter((s) => s !== skill),
-    });
+}) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Complete your profile</DialogTitle>
           <DialogDescription>
-            Please provide the following information to complete your
-            registration.
+            Please provide some additional information to complete your
+            registration
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="wallet-address">Wallet Address</Label>
-            <Input
-              id="wallet-address"
-              value={address}
-              disabled
-              className="text-sm font-mono truncate"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleFormChange}
-              placeholder="Your name"
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleFormChange}
-              placeholder="your.email@example.com"
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="skills">Skills</Label>
-            <div className="flex gap-2">
+        <form onSubmit={onSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="skills">Skills (comma separated)</Label>
               <Input
                 id="skills"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                placeholder="Add a skill (e.g., Solidity, React)"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addSkill();
-                  }
-                }}
+                name="skills"
+                value={formData.skills}
+                onChange={handleChange}
+                placeholder="React, Solidity, TypeScript..."
               />
-              <Button type="button" onClick={addSkill} size="sm">
-                Add
-              </Button>
             </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {formData.skills.map((skill, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
-                  {skill}
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => removeSkill(skill)}
-                  />
-                </Badge>
-              ))}
+            <div className="grid gap-2">
+              <Label htmlFor="address">Wallet Address</Label>
+              <Input id="address" value={address} disabled />
             </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button
-            onClick={onSubmit}
-            disabled={!formData.name || !formData.email}
-          >
-            Register
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="submit">Register</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default RegistrationDialog;

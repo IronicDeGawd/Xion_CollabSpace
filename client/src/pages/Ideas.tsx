@@ -27,10 +27,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
@@ -180,10 +179,12 @@ const Ideas = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Project Ideas</h1>
+            <h1 className="text-3xl font-bold">
+              Project Ideas [Work in Progress]
+            </h1>
             <p className="text-muted-foreground">
               Browse and submit ideas for future Web3 projects
             </p>
@@ -214,7 +215,6 @@ const Ideas = () => {
             <TabsTrigger value="popular">Popular</TabsTrigger>
             <TabsTrigger value="recent">Recent</TabsTrigger>
             <TabsTrigger value="trending">Trending</TabsTrigger>
-            {/* {isConnected && <TabsTrigger value="upvoted">Upvoted</TabsTrigger>} */}
           </TabsList>
         </Tabs>
 
@@ -223,16 +223,26 @@ const Ideas = () => {
             filteredIdeas.map((idea) => (
               <Card
                 key={idea.id}
-                className="h-full hover:shadow-md transition-shadow"
+                className="card-hover h-full transition-all duration-300"
               >
                 <CardHeader>
-                  <CardTitle>{idea.title}</CardTitle>
-                  <CardDescription>{idea.description}</CardDescription>
+                  <CardTitle className="group">
+                    <span className="transition-colors hover:text-web3-primary">
+                      {idea.title}
+                    </span>
+                  </CardTitle>
+                  <CardDescription className="line-clamp-3">
+                    {idea.description}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {idea.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="transition-colors hover:bg-web3-primary/20 hover:text-web3-primary"
+                      >
                         {tag}
                       </Badge>
                     ))}
@@ -254,15 +264,15 @@ const Ideas = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 group"
                         onClick={(e) => toggleUpvote(idea.id, e)}
                         disabled={!isConnected}
                       >
                         <ThumbsUp
-                          className={`h-4 w-4 ${
+                          className={`h-4 w-4 transition-transform duration-300 ${
                             upvotedIdeas.includes(idea.id)
-                              ? "fill-primary text-primary"
-                              : ""
+                              ? "fill-primary text-primary scale-125"
+                              : "group-hover:scale-110"
                           }`}
                         />
                         <span>
@@ -274,13 +284,17 @@ const Ideas = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 group"
                       >
-                        <MessageSquare className="h-4 w-4" />
+                        <MessageSquare className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
                         <span>{idea.comments}</span>
                       </Button>
                     </div>
-                    <Button size="sm" onClick={(e) => openIdeaDetail(idea, e)}>
+                    <Button
+                      size="sm"
+                      onClick={(e) => openIdeaDetail(idea, e)}
+                      className="bg-web3-primary hover:bg-web3-primary/90 transition-all duration-300 btn-pulse"
+                    >
                       View Details
                     </Button>
                   </div>

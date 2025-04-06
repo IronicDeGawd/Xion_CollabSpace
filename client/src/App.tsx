@@ -7,17 +7,17 @@ import { AuthProvider } from "./context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Projects from "./pages/Projects";
-import Ideas from "./pages/Ideas";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
+import Ideas from "./pages/Ideas";
 import ProjectDetail from "./pages/ProjectDetail";
 import PrivateRoute from "./components/PrivateRoute";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "@/components/ui/toaster";
-// import { Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "@burnt-labs/abstraxion/dist/index.css";
 import "@burnt-labs/ui/dist/index.css";
+import React from "react";
 
 const queryClient = new QueryClient();
 
@@ -29,29 +29,31 @@ const App = () => (
           <SidebarProvider>
             <TooltipProvider>
               <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/projects" element={<Projects />} />
-                  <Route path="/ideas" element={<Ideas />} />
-                  <Route path="/project/:id" element={<ProjectDetail />} />
-                  <Route
-                    path="/profile"
-                    element={
-                      <PrivateRoute>
-                        <Profile />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <PrivateRoute>
-                        <Dashboard />
-                      </PrivateRoute>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <div className="app-container">
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/projects" element={<Projects />} />
+                    <Route path="/ideas" element={<Ideas />} />
+                    <Route path="/projects/:id" element={<ProjectDetail />} />
+                    <Route
+                      path="/profile"
+                      element={
+                        <PrivateRoute>
+                          <Profile />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <PrivateRoute>
+                          <Dashboard />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
                 <Toaster />
               </BrowserRouter>
             </TooltipProvider>

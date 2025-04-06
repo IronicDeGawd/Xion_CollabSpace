@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Search, Users, Calendar, Bookmark, Filter } from "lucide-react";
+import {
+  ArrowRight,
+  Plus,
+  Search,
+  Users,
+  Calendar,
+  Filter,
+  Loader2,
+  UserCircle,
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import { ProjectCardSkeleton } from "@/components/Loading";
 import {
   Sheet,
   SheetContent,
@@ -26,8 +36,15 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useAbstraxionAccount,
-  useAbstraxionClient,
+  useAbstraxionSigningClient,
 } from "@burnt-labs/abstraxion";
+import { useToast } from "@/components/ui/use-toast";
+import ProjectFormDialog from "@/components/ProjectFormDialog";
+import type { ExecuteResult } from "@cosmjs/cosmwasm-stargate";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
+
+type ExecuteResultOrUndefined = ExecuteResult | undefined;
 
 // All possible skill tags
 const ALL_SKILLS = [
@@ -51,65 +68,154 @@ const ALL_SKILLS = [
   "Vyper",
 ];
 
-// Define the Project type to match the contract response
+// Base contract project interface
 interface Project {
   id: string;
   title: string;
   description: string;
   owner: string;
   skills_required: string[];
-  type: string;
-  trust_level: string;
+  type?: string;
+  trust_level?: string;
   created_at: string;
-  // Commented out for future implementation when contract includes this data
-  // collaborators: number;
-  // upvotes: number;
+}
+
+// Extended project interface with database data
+interface ExtendedProject {
+  project_id: string;
+  title: string;
+  description: string;
+  owner_address: string;
+  skills_required: string[];
+  status: string;
+  collaborator_count: number;
+  owner_name?: string;
+  owner_image?: string;
+  repository_url?: string;
+  website_url?: string;
+  created_at: string;
+  // Optional fields to match with contract data
+  id?: string;
+  owner?: string;
+  type?: string;
+  trust_level?: string;
 }
 
 const Projects = () => {
-  const { isConnected } = useAbstraxionAccount();
-  const { client: queryClient } = useAbstraxionClient();
+  const { isConnected, data: account } = useAbstraxionAccount();
+  const { client } = useAbstraxionSigningClient();
+  const { toast } = useToast();
+  const { isAuthenticated, token } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ExtendedProject[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [projectType, setProjectType] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    skillsRequired: "",
+    repositoryUrl: "",
+    websiteUrl: "",
+  });
+
+  const [executeResult, setExecuteResult] =
+    useState<ExecuteResultOrUndefined>(undefined);
 
   const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 
-  const getProject = async () => {
+  // More efficient project loading strategy
+  const getProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
 
+    // Try database first (it has the most complete data)
     try {
-      // Query the contract
-      const response = await queryClient.queryContractSmart(contractAddress, {
-        ListProjects: {},
-      });
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/projects`;
+      console.log("Fetching from API:", apiUrl);
 
-      console.log(response);
+      const dbResponse = await axios.get(apiUrl);
+      console.log("Database response data:", dbResponse.data);
 
-      // Set the projects from the response
-      if (Array.isArray(response)) {
-        setProjects(response);
-      } else {
-        console.error("Unexpected response format:", response);
-        setError("Unexpected response format from the contract");
+      if (dbResponse.data) {
+        // Make sure to convert the data to the expected format
+        const formattedProjects = Array.isArray(dbResponse.data)
+          ? dbResponse.data.map((project) => ({
+              project_id: project.project_id || "",
+              id: project.id || project.project_id || "",
+              title: project.title || "",
+              description: project.description || "",
+              owner_address: project.owner_address || project.owner || "",
+              owner: project.owner || project.owner_address || "",
+              skills_required: Array.isArray(project.skills_required)
+                ? project.skills_required
+                : [],
+              status: project.status || "Open",
+              collaborator_count: project.collaborator_count || 0,
+              owner_name: project.owner_name || "Unknown User",
+              created_at: project.created_at || new Date().toISOString(),
+              type: project.type || "Standard",
+              trust_level: project.trust_level || "Normal",
+            }))
+          : [];
+
+        setProjects(formattedProjects);
+        console.log("Projects loaded:", formattedProjects.length);
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error querying contract:", error);
-      setError("Failed to query the contract. Please try again.");
-    } finally {
-      setLoading(false);
+    } catch (dbError) {
+      console.error("Database fetch failed:", dbError);
     }
-  };
+
+    // Fallback to blockchain data if database fails or returns empty
+    if (client) {
+      try {
+        const contractResponse = await client.queryContractSmart(
+          contractAddress,
+          {
+            ListProjects: {},
+          }
+        );
+
+        if (Array.isArray(contractResponse) && contractResponse.length > 0) {
+          const formattedProjects = contractResponse.map((project) => ({
+            project_id: project.id,
+            title: project.title,
+            description: project.description,
+            owner_address: project.owner,
+            skills_required: project.skills_required || [],
+            status: project.status || "Open",
+            collaborator_count: 0,
+            owner_name: "Unknown User",
+            created_at: project.created_at || new Date().toISOString(),
+          }));
+
+          console.log("Contract Response", contractResponse);
+
+          setProjects(formattedProjects);
+        } else {
+          setProjects([]);
+        }
+      } catch (contractError) {
+        console.error("Contract fetch failed:", contractError);
+        setError("Failed to load projects from blockchain");
+        setProjects([]);
+      }
+    } else {
+      setProjects([]);
+      setError("No data sources available");
+    }
+
+    setLoading(false);
+  }, [client, contractAddress]);
 
   useEffect(() => {
-    if (queryClient) {
-      getProject();
-    }
-  }, [queryClient]);
+    getProjects();
+  }, [getProjects]);
 
   // Filter projects based on search query and filters
   const filteredProjects = projects.filter((project) => {
@@ -121,10 +227,17 @@ const Projects = () => {
     // Filter by selected skills (if any)
     const matchesSkills =
       selectedSkills.length === 0 ||
-      selectedSkills.some((skill) => project.skills_required.includes(skill));
+      selectedSkills.some((skill) =>
+        project.skills_required.some(
+          (projSkill) => projSkill.toLowerCase() === skill.toLowerCase()
+        )
+      );
 
-    // Filter by project type
-    const matchesType = projectType === "all" || project.type === projectType;
+    // Filter by project type - adjust to use type field if available
+    const projectType = project.type || "Standard"; // Use a default if not available
+    const matchesType =
+      projectType === "all" ||
+      projectType.toLowerCase() === project.type?.toLowerCase();
 
     return matchesSearch && matchesSkills && matchesType;
   });
@@ -135,16 +248,147 @@ const Projects = () => {
     );
   };
 
-  // Future function for handling upvotes - commented for future implementation
-  // const handleUpvote = (projectId: string, e: React.MouseEvent) => {
-  //   e.preventDefault();
-  //   // Upvote logic to be implemented when contract supports it
-  //   console.log("Upvote project:", projectId);
-  // };
+  // Handle form input changes
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Create project submission handler
+  const createProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!account || !client) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to create a project",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please register or login first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingProject(true);
+
+    const skillsArray = formData.skillsRequired
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter((skill) => skill !== "");
+
+    // Contract message
+    const msg = {
+      CreateProject: {
+        title: formData.title,
+        description: formData.description,
+        skills_required: skillsArray,
+      },
+    };
+
+    try {
+      // First create project on-chain
+      const res = await client?.execute(
+        account.bech32Address,
+        contractAddress,
+        msg,
+        "auto"
+      );
+
+      setExecuteResult(res);
+      console.log("Transaction successful:", res);
+
+      // Get project ID from events
+      const projectId = res.events[11].attributes[2].value;
+
+      if (!projectId) {
+        throw new Error("Failed to extract project ID from transaction");
+      }
+
+      // Now save extended details in the database
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/projects`,
+        {
+          project_id: projectId,
+          title: formData.title,
+          description: formData.description,
+          skills_required: skillsArray,
+          repository_url: formData.repositoryUrl,
+          website_url: formData.websiteUrl,
+          status: "Open",
+        },
+        {
+          headers: {
+            "x-auth-token": token,
+          },
+        }
+      );
+
+      toast({
+        title: "Project created!",
+        description: "Your project has been successfully created.",
+      });
+
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        skillsRequired: "",
+        repositoryUrl: "",
+        websiteUrl: "",
+      });
+
+      setIsCreateDialogOpen(false);
+
+      // Refresh projects after successful creation
+      await getProjects();
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Error creating project",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
+
+  // Helper function to extract project ID from transaction logs
+  const extractProjectIdFromEvents = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    logs: readonly any[] | undefined
+  ): string | null => {
+    if (!logs || logs.length === 0) return null;
+
+    // Search for the project_id attribute in the events
+    for (const log of logs) {
+      for (const event of log.events) {
+        for (const attribute of event.attributes) {
+          if (attribute.key === "project_id") {
+            return attribute.value;
+          }
+        }
+      }
+    }
+
+    return null;
+  };
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold">Projects</h1>
@@ -172,32 +416,8 @@ const Projects = () => {
 
                 <div className="py-4">
                   <h3 className="font-medium mb-2">Project Type</h3>
-                  {/* Free/Paid currently not added to contract */}
-                  {/* <div className="grid grid-cols-3 gap-2 mb-6">
-                    <Button
-                      variant={projectType === "all" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setProjectType("all")}
-                    >
-                      All
-                    </Button>
-                    <Button
-                      variant={projectType === "free" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setProjectType("free")}
-                    >
-                      Free
-                    </Button>
-                    <Button
-                      variant={projectType === "paid" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setProjectType("paid")}
-                    >
-                      Paid
-                    </Button>
-                  </div> */}
 
-                  <h3 className="font-medium mb-2">Skills</h3>
+                  <h3 className="font-medium mb-2 mt-4">Skills</h3>
                   <div className="space-y-2">
                     {ALL_SKILLS.map((skill) => (
                       <div key={skill} className="flex items-center space-x-2">
@@ -229,12 +449,15 @@ const Projects = () => {
               </SheetContent>
             </Sheet>
 
-            {/* {isConnected && (
-              <Button className="flex items-center gap-2">
+            {isConnected && (
+              <Button
+                className="flex items-center gap-2"
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
                 <Plus className="h-4 w-4" />
                 Create Project
               </Button>
-            )} */}
+            )}
           </div>
         </div>
 
@@ -260,110 +483,101 @@ const Projects = () => {
         </Tabs>
 
         {loading ? (
-          <div className="col-span-full text-center py-12">
-            <div className="text-muted-foreground">Loading projects...</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
           </div>
         ) : error ? (
-          <div className="col-span-full text-center py-12">
-            <div className="text-red-500">{error}</div>
-            <Button variant="outline" className="mt-4" onClick={getProject}>
+          <div className="text-center py-12">
+            <div className="text-xl font-bold text-red-500">{error}</div>
+            <Button onClick={getProjects} className="mt-4">
               Try Again
             </Button>
           </div>
-        ) : (
+        ) : filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.length > 0 ? (
-              filteredProjects.map((project) => (
-                // <Link key={project.id} to={`/projects/${project.id}`}>
-                <Card className="h-full hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle>{project.title}</CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          // Save project functionality would go here
-                        }}
-                      >
-                        <Bookmark className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <CardDescription>{project.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {project.skills_required.map((skill) => (
-                        <Badge key={skill} variant="outline">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      {/* Commenting out collaborators display for future implementation */}
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {/* <span>{project.collaborators || 0} collaborators</span> */}
-                        <span>0 collaborators</span>{" "}
-                        {/* Placeholder until contract data is available */}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{project.created_at || "N/A"}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="border-t pt-4">
-                    <div className="w-full flex justify-between items-center">
-                      <Badge
-                        variant={
-                          project.type === "paid" ? "default" : "secondary"
-                        }
-                      >
-                        {project.type === "paid" ? "Paid" : "Free"}
+            {filteredProjects.map((project) => (
+              <Card
+                key={project.project_id || project.id}
+                className="card-hover border border-border overflow-hidden"
+              >
+                <CardHeader>
+                  <CardTitle className="text-foreground">
+                    {project.title}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {project.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {project.skills_required.map((skill) => (
+                      <Badge key={skill} variant="secondary">
+                        {skill}
                       </Badge>
-                      <Button size="sm">View Details</Button>
+                    ))}
+                  </div>
+                  <div className="flex flex-col space-y-2 mt-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="h-4 w-4" />
+                      <span>{project.owner_name || "Unknown Owner"}</span>
                     </div>
-
-                    {/* Upvote functionality - commented for future implementation */}
-                    {/* <div className="mt-2 w-full flex justify-between items-center">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="p-1"
-                            onClick={(e) => handleUpvote(project.id, e)}
-                          >
-                            <ThumbsUp className="h-4 w-4 mr-1" />
-                            <span>{project.upvotes || 0}</span>
-                          </Button>
-                        </div>
-                      </div> */}
-                  </CardFooter>
-                </Card>
-                // </Link>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <div className="text-muted-foreground">
-                  No projects found matching your criteria
-                </div>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedSkills([]);
-                    setProjectType("all");
-                  }}
-                >
-                  Reset Filters
-                </Button>
-              </div>
-            )}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {new Date(project.created_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>
+                        {project.collaborator_count || 0} Contributors
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t pt-4">
+                  <Button asChild className="w-full">
+                    <Link
+                      to={`/projects/${project.project_id}`}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      View Details
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-xl font-bold">No projects found</div>
+            <div className="text-muted-foreground mt-2">
+              {searchQuery || selectedSkills.length > 0
+                ? "Try adjusting your search or filters"
+                : "Be the first to create a project!"}
+            </div>
           </div>
         )}
+
+        {/* Project Form Dialog */}
+        <ProjectFormDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          onSubmit={createProject}
+          formData={formData}
+          handleChange={handleChange}
+          loading={isCreatingProject}
+        />
       </div>
     </Layout>
   );

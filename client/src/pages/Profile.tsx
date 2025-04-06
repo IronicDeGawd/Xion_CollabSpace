@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Layout from "@/components/Layout";
-import { Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -21,54 +21,55 @@ import {
   UserCircle2,
   Mail,
   Wallet,
+  Loader2,
 } from "lucide-react";
 import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
+import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
+import { User } from "@/types";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { useToast } from "@/components/ui/use-toast";
 
-// Mock projects - keep these for now as they're not in the user data yet
-const USER_PROJECTS = [
-  {
-    id: "1",
-    title: "DeFi Lending Protocol",
-    description: "A lending platform with algorithmic interest rates.",
-    role: "Smart Contract Developer",
-    status: "In Progress",
-  },
-  {
-    id: "2",
-    title: "NFT Marketplace",
-    description: "Marketplace for trading digital collectibles with low fees.",
-    role: "Frontend Developer",
-    status: "Completed",
-  },
-];
+interface Project {
+  project_id: string;
+  title: string;
+  description: string;
+  status: string;
+  role?: string;
+  collaboration_status?: string;
+}
+
+interface UserProjects {
+  owned: Project[];
+  collaborating: Project[];
+}
 
 const Profile = () => {
-  const { isConnected, data: walletData } = useAbstraxionAccount();
-  const { user, loading, error, updateProfile } = useAuth();
+  const { isConnected, data: address } = useAbstraxionAccount();
+  const { isAuthenticated, user, updateProfile } = useAuth();
+  const [userProjects, setUserProjects] = useState<UserProjects>({
+    owned: [],
+    collaborating: [],
+  });
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const fetchedRef = useRef(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const { toast } = useToast();
 
-  // Calculate a simple XP system (can be enhanced later)
-  const userLevel = user ? Math.floor(user.skills.length / 2) + 1 : 1;
-  const userXP = user ? user.skills.length * 100 : 0;
-  const xpProgress = 70; // Mock progress percentage (can be calculated based on XP logic)
-
-  // Get the month and year the user joined
-  const joinedDate = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-    : "Recent";
+  // Format date to readable string
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Recently";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   // Handle profile update
-  const handleUpdateProfile = async (about: string, imageUrl: string) => {
+  const handleUpdateProfile = async (bio: string, imageUrl: string) => {
     try {
-      await updateProfile(about, imageUrl);
+      await updateProfile(bio, imageUrl);
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully",
@@ -82,62 +83,80 @@ const Profile = () => {
     }
   };
 
-  // Redirect to homepage if not connected
-  if (!isConnected) {
-    return <Navigate to="/" replace />;
-  }
+  // Create a complete userData object with all required properties
+  const userData = {
+    name: user?.name || "Guest User",
+    email: user?.email || "Not provided",
+    address: user?.address || address?.bech32Address || "Not connected",
+    skills: user?.skills || [],
+    image_url: user?.image_url || undefined,
+    bio: user?.bio || "No bio provided",
+    xp: user?.xp || Math.floor(Math.random() * 500) + 50,
+    xpProgress: user?.xpProgress || Math.floor(Math.random() * 100),
+    verifiedEmail: user?.verifiedEmail || true,
+    joinedDate: user?.created_at ? formatDate(user.created_at) : "Recently",
+  };
 
-  if (loading) {
+  // Modify the useEffect hook to prevent infinite queries
+  useEffect(() => {
+    // Skip if conditions aren't right
+    if (
+      !isConnected ||
+      !isAuthenticated ||
+      !address?.bech32Address ||
+      fetchedRef.current
+    ) {
+      return;
+    }
+
+    fetchedRef.current = true;
+    const controller = new AbortController();
+
+    const fetchUserProjects = async () => {
+      setProjectsLoading(true);
+      try {
+        const response = await axios.get(
+          `${
+            import.meta.env.VITE_API_URL || "http://localhost:5000"
+          }/api/projects/user/${address.bech32Address}`,
+          { signal: controller.signal }
+        );
+
+        setUserProjects({
+          owned: response.data.owned || [],
+          collaborating: response.data.collaborating || [],
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        console.error("Error fetching user projects:", error);
+        setUserProjects({ owned: [], collaborating: [] });
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
+    fetchUserProjects();
+
+    return () => {
+      controller.abort();
+      fetchedRef.current = false;
+    };
+  }, [isConnected, isAuthenticated]); // Remove address?.bech32Address from dependencies
+
+  // Redirect to home if not connected
+  if (!isConnected || !isAuthenticated) {
     return (
       <Layout>
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader className="text-center">
-                  <div className="mx-auto mb-4">
-                    <Skeleton className="w-24 h-24 rounded-full" />
-                  </div>
-                  <Skeleton className="h-5 w-32 mx-auto" />
-                  <Skeleton className="h-4 w-24 mx-auto mt-2" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-12" />
-                      </div>
-                      <Skeleton className="h-2 w-full" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="lg:col-span-3">
-              <Skeleton className="h-10 w-full mb-6" />
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-32" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-20 w-full" />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (error) {
-    return (
-      <Layout>
-        <div className="max-w-6xl mx-auto p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">Error Loading Profile</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button>Retry</Button>
+        <div className="max-w-6xl mx-auto py-12 text-center">
+          <h1 className="text-3xl font-bold mb-4">Profile Not Available</h1>
+          <p className="text-muted-foreground mb-8">
+            Please connect your wallet and sign in to view your profile.
+          </p>
+          <Button asChild>
+            <Link to="/">Return to Home</Link>
+          </Button>
         </div>
       </Layout>
     );
@@ -145,36 +164,35 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Profile Sidebar */}
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="bg-card border border-border">
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4">
                   <Avatar className="w-24 h-24">
-                    {user?.image_url ? (
-                      <AvatarImage src={user.image_url} alt={user.name} />
-                    ) : null}
-                    <AvatarFallback className="text-2xl bg-web3-light text-web3-primary">
-                      {user?.name
-                        ? user.name.substring(0, 2).toUpperCase()
-                        : "??"}
+                    <AvatarImage
+                      src={userData.image_url || undefined}
+                      alt={userData.name}
+                    />
+                    <AvatarFallback className="text-2xl bg-secondary text-primary">
+                      {userData.name.substring(0, 2)}
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                <CardTitle>{user?.name}</CardTitle>
-                <CardDescription>Level {userLevel} Developer</CardDescription>
+                <CardTitle>{userData.name}</CardTitle>
+                <CardDescription>Web3 Developer</CardDescription>
                 <div className="mt-2">
                   <Badge
                     variant="outline"
                     className="flex items-center gap-1 mx-auto p-2"
                   >
                     <Wallet className="h-4 w-7" />
-                    <span className="line-clamp-2 text-xs overflow-hidden text-ellipsis">
-                      {user?.address.substring(0, 8)}...
-                      {user?.address.substring(user.address.length - 6)}
+                    <span className="line-clamp-2">
+                      {address.bech32Address}
                     </span>
+                    <span>...</span>
                   </Badge>
                 </div>
               </CardHeader>
@@ -182,30 +200,31 @@ const Profile = () => {
                 <div className="space-y-6">
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">XP: {userXP}</span>
+                      <span className="text-sm font-medium">
+                        XP: {userData.xp}
+                      </span>
                       <span className="text-sm text-muted-foreground">
-                        {xpProgress}%
+                        {userData.xpProgress}%
                       </span>
                     </div>
-                    <Progress value={xpProgress} className="h-2" />
+                    <Progress value={userData.xpProgress} className="h-2" />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="text-sm truncate">{user?.email}</span>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="text-xs self-start sm:self-auto sm:ml-auto"
-                      >
-                        Verified
-                      </Badge>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{userData.email}</span>
+                      {userData.verifiedEmail && (
+                        <Badge variant="outline" className="ml-auto text-xs">
+                          Verified
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Joined {joinedDate}</span>
+                      <span className="text-sm">
+                        Joined {userData.joinedDate}
+                      </span>
                     </div>
                   </div>
 
@@ -240,10 +259,7 @@ const Profile = () => {
                       <CardTitle>About</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p>
-                        {user?.about ||
-                          "Tell us about yourself and your experience in Web3 development."}
-                      </p>
+                      <p>{userData.bio}</p>
                     </CardContent>
                   </Card>
 
@@ -253,48 +269,125 @@ const Profile = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {user?.skills && user.skills.length > 0 ? (
-                          user.skills.map((skill) => (
-                            <Badge key={skill} variant="secondary">
-                              {skill}
-                            </Badge>
-                          ))
-                        ) : (
-                          <p className="text-muted-foreground">
-                            No skills added yet
-                          </p>
-                        )}
+                        {userData.skills.map((skill) => (
+                          <Badge key={skill} variant="secondary">
+                            {skill}
+                          </Badge>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row justify-between items-center">
                       <CardTitle>Recent Projects</CardTitle>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to="/projects">View All</Link>
+                      </Button>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {USER_PROJECTS.map((project) => (
-                          <div
-                            key={project.id}
-                            className="p-4 border rounded-lg"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-medium">{project.title}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {project.description}
-                                </p>
+                      {projectsLoading ? (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                      ) : userProjects.owned.length > 0 ||
+                        userProjects.collaborating.length > 0 ? (
+                        <div className="space-y-4">
+                          {/* Owned projects */}
+                          {userProjects.owned.slice(0, 2).map((project) => (
+                            <div
+                              key={project.project_id}
+                              className="p-4 border rounded-lg"
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium">
+                                    {project.title}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {project.description.length > 100
+                                      ? `${project.description.substring(
+                                          0,
+                                          100
+                                        )}...`
+                                      : project.description}
+                                  </p>
+                                </div>
+                                <Badge>{project.status}</Badge>
                               </div>
-                              <Badge>{project.status}</Badge>
+                              <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                                <Briefcase className="h-4 w-4 mr-1" />
+                                <span>Role: Owner</span>
+                              </div>
+                              <div className="mt-2">
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link to={`/projects/${project.project_id}`}>
+                                    View Project
+                                  </Link>
+                                </Button>
+                              </div>
                             </div>
-                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
-                              <Briefcase className="h-4 w-4 mr-1" />
-                              <span>Role: {project.role}</span>
-                            </div>
+                          ))}
+
+                          {/* Collaborating projects */}
+                          {userProjects.collaborating
+                            .slice(0, 2)
+                            .map((project) => (
+                              <div
+                                key={project.project_id}
+                                className="p-4 border rounded-lg"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h3 className="font-medium">
+                                      {project.title}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      {project.description.length > 100
+                                        ? `${project.description.substring(
+                                            0,
+                                            100
+                                          )}...`
+                                        : project.description}
+                                    </p>
+                                  </div>
+                                  <Badge
+                                    variant={
+                                      project.collaboration_status ===
+                                      "Approved"
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                  >
+                                    {project.collaboration_status}
+                                  </Badge>
+                                </div>
+                                <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                                  <Briefcase className="h-4 w-4 mr-1" />
+                                  <span>Role: {project.role}</span>
+                                </div>
+                                <div className="mt-2">
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link
+                                      to={`/projects/${project.project_id}`}
+                                    >
+                                      View Project
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          You haven't created or joined any projects yet.
+                          <div className="mt-2">
+                            <Button asChild>
+                              <Link to="/projects">Browse Projects</Link>
+                            </Button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -309,25 +402,99 @@ const Profile = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {USER_PROJECTS.map((project) => (
-                        <div key={project.id} className="p-4 border rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium">{project.title}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {project.description}
-                              </p>
+                    {projectsLoading ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : userProjects.owned.length > 0 ||
+                      userProjects.collaborating.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Owned projects */}
+                        {userProjects.owned.map((project) => (
+                          <div
+                            key={project.project_id}
+                            className="p-4 border rounded-lg"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-medium">{project.title}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {project.description.length > 100
+                                    ? `${project.description.substring(
+                                        0,
+                                        100
+                                      )}...`
+                                    : project.description}
+                                </p>
+                              </div>
+                              <Badge>{project.status}</Badge>
                             </div>
-                            <Badge>{project.status}</Badge>
+                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                              <Briefcase className="h-4 w-4 mr-1" />
+                              <span>Role: Owner</span>
+                            </div>
+                            <div className="mt-2">
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/projects/${project.project_id}`}>
+                                  View Project
+                                </Link>
+                              </Button>
+                            </div>
                           </div>
-                          <div className="mt-2 flex items-center text-sm text-muted-foreground">
-                            <Briefcase className="h-4 w-4 mr-1" />
-                            <span>Role: {project.role}</span>
+                        ))}
+
+                        {/* Collaborating projects */}
+                        {userProjects.collaborating.map((project) => (
+                          <div
+                            key={project.project_id}
+                            className="p-4 border rounded-lg"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-medium">{project.title}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {project.description.length > 100
+                                    ? `${project.description.substring(
+                                        0,
+                                        100
+                                      )}...`
+                                    : project.description}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={
+                                  project.collaboration_status === "Approved"
+                                    ? "default"
+                                    : "outline"
+                                }
+                              >
+                                {project.collaboration_status}
+                              </Badge>
+                            </div>
+                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                              <Briefcase className="h-4 w-4 mr-1" />
+                              <span>Role: {project.role}</span>
+                            </div>
+                            <div className="mt-2">
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link to={`/projects/${project.project_id}`}>
+                                  View Project
+                                </Link>
+                              </Button>
+                            </div>
                           </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        You haven't created or joined any projects yet.
+                        <div className="mt-2">
+                          <Button asChild>
+                            <Link to="/projects">Browse Projects</Link>
+                          </Button>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -378,13 +545,11 @@ const Profile = () => {
           </div>
         </div>
       </div>
-
-      {/* Profile Edit Dialog */}
       <ProfileEditDialog
         open={isEditProfileOpen}
         onOpenChange={setIsEditProfileOpen}
         initialData={{
-          about: user?.about || "",
+          about: user?.bio || "",
           imageUrl: user?.image_url || "",
         }}
         onSave={handleUpdateProfile}

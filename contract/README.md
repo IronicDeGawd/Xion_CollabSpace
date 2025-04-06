@@ -105,7 +105,7 @@ xiond tx wasm execute <contract_address> "$MSG" \
 ```sh
 QUERY='{"ListProjects":{}}'
 
-xiond query wasm contract-state smart <contract_address> "$QUERY" \
+xiond query wasm contract-state smart $contract "$QUERY" \
   --output json \
   --node https://rpc.xion-testnet-2.burnt.com:443
 ```

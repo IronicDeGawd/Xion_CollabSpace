@@ -1,17 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import axios, { AxiosError } from "axios";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
+import axios from "axios";
+import { User } from "@/types";
 
-// Define User interface
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  address: string;
-  skills: string[];
-  createdAt?: string;
-  updatedAt?: string;
-  about?: string;
-  image_url?: string;
+// Define error response interface
+interface ErrorResponse {
+  msg?: string;
+  message?: string;
+  error?: string;
 }
 
 interface AuthContextType {
@@ -19,20 +21,20 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  login: (address: string) => Promise<void>;
+  login: (address: string) => Promise<boolean>;
   register: (
     name: string,
     email: string,
     address: string,
     skills: string[]
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
-  updateProfile: (about: string, imageUrl: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -50,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadUserRef = useRef(false);
 
   const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
@@ -58,32 +61,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
-  useEffect(() => {
-    // On mount, try to load user if we have a token
-    const initialToken = localStorage.getItem("token");
-    if (initialToken) {
-      setToken(initialToken);
-    } else {
+  const loadUser = useCallback(async () => {
+    if (!token || loadUserRef.current) {
       setLoading(false);
+      return;
     }
-  }, []);
 
-  // Separate effect to handle token changes
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-      loadUser();
-    } else {
-      localStorage.removeItem("token");
-      setUser(null);
-      setLoading(false);
-    }
-  }, [token]);
+    loadUserRef.current = true;
 
-  const loadUser = async (): Promise<void> => {
     try {
-      setLoading(true);
-      const res = await api.get<User>("/api/user-data", {
+      const res = await api.get("/api/auth", {
         headers: {
           "x-auth-token": token,
         },
@@ -97,27 +84,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       setToken(null);
       setError("Authentication error");
+      localStorage.removeItem("token");
     } finally {
       setLoading(false);
+      loadUserRef.current = false;
     }
-  };
+  }, [token]);
 
-  const login = async (address: string): Promise<void> => {
+  useEffect(() => {
+    if (token) {
+      loadUser();
+    } else {
+      setUser(null);
+      setLoading(false);
+    }
+  }, [token]); // Remove loadUser from dependencies
+
+  const login = async (address: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const res = await api.post<{ token: string }>("/api/auth/login", {
-        address,
-      });
+      const res = await api.post("/api/auth/login", { address });
       setToken(res.data.token);
       setError(null);
+      return true;
     } catch (err) {
-      const axiosError = err as AxiosError<{ msg: string }>;
-      console.error(
-        "Login error:",
-        axiosError.response?.data?.msg || axiosError.message
-      );
-      setError(axiosError.response?.data?.msg || "Login failed");
-      throw err;
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data
+          ? (err.response.data as ErrorResponse).msg ||
+            (err.response.data as ErrorResponse).message ||
+            (err.response.data as ErrorResponse).error ||
+            "Login failed"
+          : err instanceof Error
+          ? err.message
+          : "Login failed";
+
+      console.error("Login error:", errorMessage);
+      setError(errorMessage);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -128,10 +131,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     email: string,
     address: string,
     skills: string[]
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     try {
       setLoading(true);
-      const res = await api.post<{ token: string }>("/api/auth/register", {
+      const res = await api.post("/api/auth/register", {
         name,
         email,
         address,
@@ -139,52 +142,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       setToken(res.data.token);
       setError(null);
+      return true;
     } catch (err) {
-      const axiosError = err as AxiosError<{ msg: string }>;
-      console.error(
-        "Register error:",
-        axiosError.response?.data?.msg || axiosError.message
-      );
-      setError(axiosError.response?.data?.msg || "Registration failed");
-      throw err;
+      const errorMessage =
+        axios.isAxiosError(err) && err.response?.data
+          ? (err.response.data as ErrorResponse).msg ||
+            (err.response.data as ErrorResponse).message ||
+            (err.response.data as ErrorResponse).error ||
+            "Registration failed"
+          : err instanceof Error
+          ? err.message
+          : "Registration failed";
+
+      console.error("Register error:", errorMessage);
+      setError(errorMessage);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = (): void => {
+  const logout = () => {
     setToken(null);
-    setUser(null);
-  };
-
-  const updateProfile = async (
-    about: string,
-    imageUrl: string
-  ): Promise<void> => {
-    try {
-      setLoading(true);
-      const res = await api.put<User>(
-        "/api/profile",
-        { about, imageUrl },
-        {
-          headers: {
-            "x-auth-token": token,
-          },
-        }
-      );
-      setUser(res.data);
-      setError(null);
-    } catch (err) {
-      const axiosError = err as AxiosError<{ msg: string }>;
-      console.error(
-        "Profile update error:",
-        axiosError.response?.data?.msg || axiosError.message
-      );
-      setError(axiosError.response?.data?.msg || "Profile update failed");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -198,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         register,
         logout,
         isAuthenticated: !!token,
-        updateProfile,
       }}
     >
       {children}

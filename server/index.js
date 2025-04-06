@@ -20,6 +20,7 @@ app.use(express.json());
 app.use("/api/auth", require("./auth"));
 app.use("/api/user-data", require("./user_data"));
 app.use("/api/profile", require("./profile"));
+app.use("/api/projects", require("./project_details"));
 
 // DB initialization
 const sql = require("./db");
@@ -46,6 +47,31 @@ const initDb = async () => {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+    await sql`
+    CREATE TABLE IF NOT EXISTS project_details (
+    id SERIAL PRIMARY KEY,
+    project_id VARCHAR(255) UNIQUE NOT NULL,
+    owner_address VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    skills_required TEXT[] NOT NULL,
+    status VARCHAR(50) DEFAULT 'Open' NOT NULL,
+    repository_url TEXT,
+    website_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`;
+    await sql`
+CREATE TABLE IF NOT EXISTS project_collaborators (
+    id SERIAL PRIMARY KEY,
+    project_id VARCHAR(255) NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    address VARCHAR(255) NOT NULL,
+    role VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'Pending' NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(project_id, user_id)
+);`;
 
     console.log("Database initialized");
   } catch (err) {
