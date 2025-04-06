@@ -9,9 +9,11 @@ const auth = require("./middleware/auth");
 router.get("/", auth, async (req, res) => {
   try {
     const result = await sql`
-      SELECT id, name, email, address, skills
-      FROM users
-      WHERE id = ${req.user.id}
+      SELECT u.id, u.name, u.email, u.address, u.skills, u.created_at,
+             p.about, p.image_url
+      FROM users u
+      LEFT JOIN user_profiles p ON u.id = p.user_id
+      WHERE u.id = ${req.user.id}
     `;
 
     if (result.length === 0) {

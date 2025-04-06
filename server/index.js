@@ -4,20 +4,28 @@ require("dotenv").config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Simplified CORS setup for Render deployment
+app.use(
+  cors({
+    origin: ["https://xion-collabspace.vercel.app", "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // Routes
 app.use("/api/auth", require("./auth"));
 app.use("/api/user-data", require("./user_data"));
+app.use("/api/profile", require("./profile"));
 
-// DB
+// DB initialization
 const sql = require("./db");
-
-// Initialize DB
 const initDb = async () => {
   try {
+    // Create users table if not exists
     await sql`
       CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -28,6 +36,17 @@ const initDb = async () => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Create user_profiles table if not exists
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_profiles (
+          user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          about TEXT,
+          image_url TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     console.log("Database initialized");
   } catch (err) {
     console.error(
@@ -37,8 +56,11 @@ const initDb = async () => {
   }
 };
 
-// initDb();
+// Initialize database on startup
+initDb();
 
+// Start server
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

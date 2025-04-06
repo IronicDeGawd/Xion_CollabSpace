@@ -7,10 +7,10 @@ const sql = postgres(connectionString, {
   ssl: {
     rejectUnauthorized: false,
   },
-  idle_timeout: 20,
+  max: 1,
+  idle_timeout: 0,
   max_lifetime: 60 * 30,
   connect_timeout: 10,
-  host_type: "ip4",
 });
 
 // Export the SQL client

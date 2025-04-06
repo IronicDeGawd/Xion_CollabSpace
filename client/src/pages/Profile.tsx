@@ -25,6 +25,8 @@ import {
 import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import ProfileEditDialog from "@/components/ProfileEditDialog";
+import { useToast } from "@/components/ui/use-toast";
 
 // Mock projects - keep these for now as they're not in the user data yet
 const USER_PROJECTS = [
@@ -46,7 +48,9 @@ const USER_PROJECTS = [
 
 const Profile = () => {
   const { isConnected, data: walletData } = useAbstraxionAccount();
-  const { user, loading, error } = useAuth();
+  const { user, loading, error, updateProfile } = useAuth();
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const { toast } = useToast();
 
   // Calculate a simple XP system (can be enhanced later)
   const userLevel = user ? Math.floor(user.skills.length / 2) + 1 : 1;
@@ -60,6 +64,23 @@ const Profile = () => {
         year: "numeric",
       })
     : "Recent";
+
+  // Handle profile update
+  const handleUpdateProfile = async (about: string, imageUrl: string) => {
+    try {
+      await updateProfile(about, imageUrl);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not update your profile",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Redirect to homepage if not connected
   if (!isConnected) {
@@ -132,6 +153,9 @@ const Profile = () => {
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4">
                   <Avatar className="w-24 h-24">
+                    {user?.image_url ? (
+                      <AvatarImage src={user.image_url} alt={user.name} />
+                    ) : null}
                     <AvatarFallback className="text-2xl bg-web3-light text-web3-primary">
                       {user?.name
                         ? user.name.substring(0, 2).toUpperCase()
@@ -185,7 +209,12 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full" size="sm">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                    onClick={() => setIsEditProfileOpen(true)}
+                  >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Button>
@@ -212,7 +241,7 @@ const Profile = () => {
                     </CardHeader>
                     <CardContent>
                       <p>
-                        {user?.bio ||
+                        {user?.about ||
                           "Tell us about yourself and your experience in Web3 development."}
                       </p>
                     </CardContent>
@@ -349,6 +378,17 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Profile Edit Dialog */}
+      <ProfileEditDialog
+        open={isEditProfileOpen}
+        onOpenChange={setIsEditProfileOpen}
+        initialData={{
+          about: user?.about || "",
+          imageUrl: user?.image_url || "",
+        }}
+        onSave={handleUpdateProfile}
+      />
     </Layout>
   );
 };

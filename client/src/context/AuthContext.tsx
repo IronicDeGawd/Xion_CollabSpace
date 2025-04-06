@@ -10,6 +10,8 @@ interface User {
   skills: string[];
   createdAt?: string;
   updatedAt?: string;
+  about?: string;
+  image_url?: string;
 }
 
 interface AuthContextType {
@@ -26,6 +28,7 @@ interface AuthContextType {
   ) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  updateProfile: (about: string, imageUrl: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -154,7 +157,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
-  // THIS IS THE MISSING PART - The return statement with context provider
+  const updateProfile = async (
+    about: string,
+    imageUrl: string
+  ): Promise<void> => {
+    try {
+      setLoading(true);
+      const res = await api.put<User>(
+        "/api/profile",
+        { about, imageUrl },
+        {
+          headers: {
+            "x-auth-token": token,
+          },
+        }
+      );
+      setUser(res.data);
+      setError(null);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ msg: string }>;
+      console.error(
+        "Profile update error:",
+        axiosError.response?.data?.msg || axiosError.message
+      );
+      setError(axiosError.response?.data?.msg || "Profile update failed");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -166,6 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         register,
         logout,
         isAuthenticated: !!token,
+        updateProfile,
       }}
     >
       {children}
