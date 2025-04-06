@@ -1,127 +1,79 @@
-# **Building and Deploying Project Management Smart Contract on Xion**
+# Frontend
 
-## **1. Building the Contract**
-### **For `project_management` Contract**
-```sh
-cd contract/project_management
+## Tech Stack
 
-# Compile the contract to WebAssembly (WASM)
-cargo build --release --target wasm32-unknown-unknown
+- React with TypeScript
+- Vite for build tooling
+- Shadcn UI components
+- React Router for navigation
+- TanStack Query for data fetching
+- Burnt Labs Abstraxion for wallet connection
 
-# Move the built contract to artifacts folder
-cp target/wasm32-unknown-unknown/release/project_management.wasm artifacts/
+## Environment Configuration
 
-# Optimize the contract using Docker
+Create a `.env` file in the root directory with the following variables:
 
-docker run --rm \
-  -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename \"$(pwd)\")_cache",target=/target \
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/optimizer:0.16.0
+```
+VITE_API_URL=http://localhost:5000
+VITE_TREASURY_ADDRESS=your-treasury-address-here
+VITE_CONTRACT_ADDRESS=your-contract-address-here
 ```
 
-## **2. Uploading Contract to Blockchain**
-```sh
-# List wallet keys
-xiond keys list
+## Getting Started
 
-# Set wallet variable
-WALLET="your-wallet-address-or-key-name-here"
+To install dependencies:
 
-# Navigate to the contract directory
-cd contract/project_management
-
-# Upload the contract to Xion testnet
-RES=$(xiond tx wasm store ./artifacts/project_management.wasm \
-      --chain-id xion-testnet-2 \
-      --gas-adjustment 1.3 \
-      --gas-prices 0.1uxion \
-      --gas auto \
-      -y --output json \
-      --node https://rpc.xion-testnet-2.burnt.com:443 \
-      --from $WALLET)
-
-# Extract transaction hash
-echo $RES
-TXHASH="your-txhash-here"
-
-# Query the transaction to get the contract's code ID
-CODE_ID=$(xiond query tx $TXHASH \
-  --node https://rpc.xion-testnet-2.burnt.com:443 \
-  --output json | jq -r '.events[-1].attributes[1].value')
-
-echo $CODE_ID
+```bash
+npm install
+# or
+yarn
+# or
+pnpm install
 ```
 
-## **3. Instantiating the Contract**
-```sh
-# Define an empty initialization message
-MSG='{}'
+To start the development server:
 
-# Instantiate the contract
-xiond tx wasm instantiate $CODE_ID "$MSG" \
-  --from $WALLET \
-  --label "project-management-contract" \
-  --gas-prices 0.025uxion \
-  --gas auto \
-  --gas-adjustment 1.3 \
-  -y --no-admin \
-  --chain-id xion-testnet-2 \
-  --node https://rpc.xion-testnet-2.burnt.com:443
-
-# Extract contract address
-TXHASH="your-txhash-here"
-CONTRACT=$(xiond query tx $TXHASH \
-  --node https://rpc.xion-testnet-2.burnt.com:443 \
-  --output json | jq -r '.events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
-
-echo $CONTRACT
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
 ```
 
-## **4. Funding the Treasury Contract**
-```sh
-xiond tx bank send <key_wallet_address> <treasury_contract_address> 50000uxion \
-  --node https://rpc.xion-testnet-2.burnt.com:443 \
-  --chain-id xion-testnet-2 \
-  --fees 200uxion
+To build the project for production:
+
+```bash
+npm run build
+# or
+yarn build
+# or
+pnpm build
 ```
 
-## **5. Executing the Project Management Contract**
-### **Creating a Project**
-```sh
-MSG='{"CreateProject": {"title":"CollabSpaceX", "description":"A space for builders to connect, collab & create", "skills_required":["Rust", "Blockchain", "Smart Contracts"]}}'
+To preview the production build:
 
-xiond tx wasm execute <contract_address> "$MSG" \
-  --from <key_wallet_address> \
-  --gas-prices 0.025uxion \
-  --gas auto \
-  --gas-adjustment 1.3 \
-  -y \
-  --node https://rpc.xion-testnet-2.burnt.com:443 \
-  --chain-id xion-testnet-2
+```bash
+npm run preview
+# or
+yarn preview
+# or
+pnpm preview
 ```
 
-### **Querying Project List**
-```sh
-QUERY='{"ListProjects":{}}'
+## Folder Structure
 
-xiond query wasm contract-state smart <contract_address> "$QUERY" \
-  --output json \
-  --node https://rpc.xion-testnet-2.burnt.com:443
-```
+- `src/`: Contains the source code of the application.
+    - `/components`: UI components including shadcn components
+    - `/context`: React context providers for auth and theme
+    - `/hooks`: Custom React hooks for authentication and wallet integration
+    - `/lib`: Utility functions and constants
+    - `/pages`: Page components organized by route
+    - `/styles`: Global CSS and theme variables
+- `public/`: Static assets like images and icons.
+- `vite.config.ts`: Configuration file for Vite.
+- `package.json`: Project dependencies and scripts.
 
-## **Example Output**
-```json
-{
-  "data": [
-    {
-      "id": "CollabSpaceX",
-      "title": "CollabSpaceX",
-      "description": "A space for builders to connect, collab & create",
-      "owner": "xion1k2j3f0lvnye9nrszytxwtkmq40p9p0rrj49px5",
-      "skills_required": ["Rust", "Blockchain", "Smart Contracts"],
-      "status": "Open"
-    }
-  ]
-}
-```
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
