@@ -2,21 +2,30 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Code, Lightbulb, Wallet } from "lucide-react";
-import { CONTRACT_ADDRESS } from "@/lib/constants";
 import {
   Abstraxion,
   useAbstraxionAccount,
   useModal,
 } from "@burnt-labs/abstraxion";
+import { useAuth } from "@/context/AuthContext";
+import { useAuthIntegration } from "@/hooks/useAuthIntegration";
+import RegistrationDialog from "@/components/RegistrationDialog";
 import "@burnt-labs/abstraxion/dist/index.css";
 import "@burnt-labs/ui/dist/index.css";
 
 const Index = () => {
-  const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
-
   // Abstraxion hooks
-  const { isConnected, isConnecting } = useAbstraxionAccount();
+  const { isConnected, isConnecting, data: address } = useAbstraxionAccount();
   const [showModal, setShowModal] = useModal();
+  const { isAuthenticated } = useAuth();
+
+  const {
+    registrationOpen,
+    setRegistrationOpen,
+    formData,
+    setFormData,
+    handleRegister,
+  } = useAuthIntegration();
 
   // Helper function to connect wallet
   const connectWallet = () => {
@@ -135,11 +144,11 @@ const Index = () => {
               Track your contributions and earn experience points on-chain.
             </p>
             <Link
-              to={isConnected ? "/profile" : "/"}
+              to={isAuthenticated ? "/profile" : "/"}
               className="flex items-center gap-1 text-primary mt-4 hover:underline"
               onClick={!isConnected ? connectWallet : undefined}
             >
-              {isConnected ? "View Profile" : "Connect Wallet"}{" "}
+              {isAuthenticated ? "View Profile" : "Connect Wallet"}{" "}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -159,9 +168,9 @@ const Index = () => {
               size="lg"
               className="flex items-center gap-2"
               onClick={!isConnected ? connectWallet : undefined}
-              asChild={isConnected}
+              asChild={isAuthenticated}
             >
-              {isConnected ? (
+              {isAuthenticated ? (
                 <Link to="/dashboard">Go to Dashboard</Link>
               ) : (
                 <>
@@ -176,6 +185,18 @@ const Index = () => {
 
       {/* Abstraxion Modal */}
       <Abstraxion onClose={() => setShowModal(false)} />
+
+      {/* Registration Dialog */}
+      {address && (
+        <RegistrationDialog
+          open={registrationOpen}
+          onOpenChange={setRegistrationOpen}
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleRegister}
+          address={address.bech32Address}
+        />
+      )}
     </Layout>
   );
 };

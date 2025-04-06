@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,77 +24,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
-
-// Mock project data
-const PROJECTS = [
-  {
-    id: "1",
-    title: "DeFi Yield Aggregator",
-    description:
-      "Building a cross-chain yield optimizer that automatically moves funds between protocols to maximize returns.",
-    skills: ["Solidity", "React", "Web3.js", "TypeScript"],
-    type: "paid",
-    trustLevel: "high",
-    createdAt: "2023-06-15",
-    collaborators: 3,
-  },
-  {
-    id: "2",
-    title: "NFT Marketplace",
-    description:
-      "A marketplace for trading NFTs with low gas fees and creator royalties.",
-    skills: ["Solidity", "Next.js", "ethers.js", "TailwindCSS"],
-    type: "free",
-    trustLevel: "medium",
-    createdAt: "2023-07-22",
-    collaborators: 2,
-  },
-  {
-    id: "3",
-    title: "DAO Governance Tool",
-    description:
-      "A tool to simplify proposal creation and voting for DAOs with gasless transactions.",
-    skills: ["Solidity", "React", "TypeScript", "TheGraph"],
-    type: "paid",
-    trustLevel: "high",
-    createdAt: "2023-08-05",
-    collaborators: 5,
-  },
-  {
-    id: "4",
-    title: "Cross-chain Bridge",
-    description:
-      "Building a secure cross-chain bridge for transferring assets between blockchains.",
-    skills: ["Rust", "Solidity", "Go", "zkSNARKs"],
-    type: "paid",
-    trustLevel: "medium",
-    createdAt: "2023-09-10",
-    collaborators: 4,
-  },
-  {
-    id: "5",
-    title: "DApp Analytics Dashboard",
-    description:
-      "An analytics dashboard for tracking DApp usage, active users, and revenue metrics.",
-    skills: ["React", "D3.js", "GraphQL", "TheGraph"],
-    type: "free",
-    trustLevel: "low",
-    createdAt: "2023-10-15",
-    collaborators: 2,
-  },
-  {
-    id: "6",
-    title: "Social Network DApp",
-    description:
-      "A decentralized social network with content monetization and censorship resistance.",
-    skills: ["Solidity", "React", "IPFS", "TailwindCSS"],
-    type: "free",
-    trustLevel: "medium",
-    createdAt: "2023-11-03",
-    collaborators: 3,
-  },
-];
+import {
+  useAbstraxionAccount,
+  useAbstraxionClient,
+} from "@burnt-labs/abstraxion";
 
 // All possible skill tags
 const ALL_SKILLS = [
@@ -118,14 +51,68 @@ const ALL_SKILLS = [
   "Vyper",
 ];
 
+// Define the Project type to match the contract response
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  owner: string;
+  skills_required: string[];
+  type: string;
+  trust_level: string;
+  created_at: string;
+  // Commented out for future implementation when contract includes this data
+  // collaborators: number;
+  // upvotes: number;
+}
+
 const Projects = () => {
   const { isConnected } = useAbstraxionAccount();
+  const { client: queryClient } = useAbstraxionClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [projectType, setProjectType] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
+
+  const getProject = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Query the contract
+      const response = await queryClient.queryContractSmart(contractAddress, {
+        ListProjects: {},
+      });
+
+      console.log(response);
+
+      // Set the projects from the response
+      if (Array.isArray(response)) {
+        setProjects(response);
+      } else {
+        console.error("Unexpected response format:", response);
+        setError("Unexpected response format from the contract");
+      }
+    } catch (error) {
+      console.error("Error querying contract:", error);
+      setError("Failed to query the contract. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (queryClient) {
+      getProject();
+    }
+  }, [queryClient]);
 
   // Filter projects based on search query and filters
-  const filteredProjects = PROJECTS.filter((project) => {
+  const filteredProjects = projects.filter((project) => {
     // Filter by search query
     const matchesSearch =
       project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -134,7 +121,7 @@ const Projects = () => {
     // Filter by selected skills (if any)
     const matchesSkills =
       selectedSkills.length === 0 ||
-      selectedSkills.some((skill) => project.skills.includes(skill));
+      selectedSkills.some((skill) => project.skills_required.includes(skill));
 
     // Filter by project type
     const matchesType = projectType === "all" || project.type === projectType;
@@ -147,6 +134,13 @@ const Projects = () => {
       prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
     );
   };
+
+  // Future function for handling upvotes - commented for future implementation
+  // const handleUpvote = (projectId: string, e: React.MouseEvent) => {
+  //   e.preventDefault();
+  //   // Upvote logic to be implemented when contract supports it
+  //   console.log("Upvote project:", projectId);
+  // };
 
   return (
     <Layout>
@@ -178,7 +172,8 @@ const Projects = () => {
 
                 <div className="py-4">
                   <h3 className="font-medium mb-2">Project Type</h3>
-                  <div className="grid grid-cols-3 gap-2 mb-6">
+                  {/* Free/Paid currently not added to contract */}
+                  {/* <div className="grid grid-cols-3 gap-2 mb-6">
                     <Button
                       variant={projectType === "all" ? "default" : "outline"}
                       size="sm"
@@ -200,7 +195,7 @@ const Projects = () => {
                     >
                       Paid
                     </Button>
-                  </div>
+                  </div> */}
 
                   <h3 className="font-medium mb-2">Skills</h3>
                   <div className="space-y-2">
@@ -234,12 +229,12 @@ const Projects = () => {
               </SheetContent>
             </Sheet>
 
-            {isConnected && (
+            {/* {isConnected && (
               <Button className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 Create Project
               </Button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -264,10 +259,22 @@ const Projects = () => {
           </TabsList>
         </Tabs>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.length > 0 ? (
-            filteredProjects.map((project) => (
-              <Link key={project.id} to={`/projects/${project.id}`}>
+        {loading ? (
+          <div className="col-span-full text-center py-12">
+            <div className="text-muted-foreground">Loading projects...</div>
+          </div>
+        ) : error ? (
+          <div className="col-span-full text-center py-12">
+            <div className="text-red-500">{error}</div>
+            <Button variant="outline" className="mt-4" onClick={getProject}>
+              Try Again
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.length > 0 ? (
+              filteredProjects.map((project) => (
+                // <Link key={project.id} to={`/projects/${project.id}`}>
                 <Card className="h-full hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -287,20 +294,23 @@ const Projects = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {project.skills.map((skill) => (
+                      {project.skills_required.map((skill) => (
                         <Badge key={skill} variant="outline">
                           {skill}
                         </Badge>
                       ))}
                     </div>
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      {/* Commenting out collaborators display for future implementation */}
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
-                        <span>{project.collaborators} collaborators</span>
+                        {/* <span>{project.collaborators || 0} collaborators</span> */}
+                        <span>0 collaborators</span>{" "}
+                        {/* Placeholder until contract data is available */}
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>{project.createdAt}</span>
+                        <span>{project.created_at || "N/A"}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -315,29 +325,45 @@ const Projects = () => {
                       </Badge>
                       <Button size="sm">View Details</Button>
                     </div>
+
+                    {/* Upvote functionality - commented for future implementation */}
+                    {/* <div className="mt-2 w-full flex justify-between items-center">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-1"
+                            onClick={(e) => handleUpvote(project.id, e)}
+                          >
+                            <ThumbsUp className="h-4 w-4 mr-1" />
+                            <span>{project.upvotes || 0}</span>
+                          </Button>
+                        </div>
+                      </div> */}
                   </CardFooter>
                 </Card>
-              </Link>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <div className="text-muted-foreground">
-                No projects found matching your criteria
+                // </Link>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="text-muted-foreground">
+                  No projects found matching your criteria
+                </div>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedSkills([]);
+                    setProjectType("all");
+                  }}
+                >
+                  Reset Filters
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedSkills([]);
-                  setProjectType("all");
-                }}
-              >
-                Reset Filters
-              </Button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );
