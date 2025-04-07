@@ -149,7 +149,7 @@ const Profile = () => {
   if (!isConnected || !isAuthenticated) {
     return (
       <Layout>
-        <div className="max-w-6xl mx-auto py-12 text-center">
+        <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto text-center">
           <h1 className="text-3xl font-bold mb-4">Profile Not Available</h1>
           <p className="text-muted-foreground mb-8">
             Please connect your wallet and sign in to view your profile.

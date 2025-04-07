@@ -43,6 +43,7 @@ import ProjectFormDialog from "@/components/ProjectFormDialog";
 import type { ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
+import type { ExtendedProject, Project } from "@/types/index";
 
 type ExecuteResultOrUndefined = ExecuteResult | undefined;
 
@@ -67,39 +68,6 @@ const ALL_SKILLS = [
   "Python",
   "Vyper",
 ];
-
-// Base contract project interface
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  owner: string;
-  skills_required: string[];
-  type?: string;
-  trust_level?: string;
-  created_at: string;
-}
-
-// Extended project interface with database data
-interface ExtendedProject {
-  project_id: string;
-  title: string;
-  description: string;
-  owner_address: string;
-  skills_required: string[];
-  status: string;
-  collaborator_count: number;
-  owner_name?: string;
-  owner_image?: string;
-  repository_url?: string;
-  website_url?: string;
-  created_at: string;
-  // Optional fields to match with contract data
-  id?: string;
-  owner?: string;
-  type?: string;
-  trust_level?: string;
-}
 
 const Projects = () => {
   const { isConnected, data: account } = useAbstraxionAccount();
@@ -132,48 +100,15 @@ const Projects = () => {
     setLoading(true);
     setError(null);
 
-    // Try database first (it has the most complete data)
-    try {
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/projects`;
-      console.log("Fetching from API:", apiUrl);
-
-      const dbResponse = await axios.get(apiUrl);
-      console.log("Database response data:", dbResponse.data);
-
-      if (dbResponse.data) {
-        // Make sure to convert the data to the expected format
-        const formattedProjects = Array.isArray(dbResponse.data)
-          ? dbResponse.data.map((project) => ({
-              project_id: project.project_id || "",
-              id: project.id || project.project_id || "",
-              title: project.title || "",
-              description: project.description || "",
-              owner_address: project.owner_address || project.owner || "",
-              owner: project.owner || project.owner_address || "",
-              skills_required: Array.isArray(project.skills_required)
-                ? project.skills_required
-                : [],
-              status: project.status || "Open",
-              collaborator_count: project.collaborator_count || 0,
-              owner_name: project.owner_name || "Unknown User",
-              created_at: project.created_at || new Date().toISOString(),
-              type: project.type || "Standard",
-              trust_level: project.trust_level || "Normal",
-            }))
-          : [];
-
-        setProjects(formattedProjects);
-        console.log("Projects loaded:", formattedProjects.length);
-        setLoading(false);
-        return;
-      }
-    } catch (dbError) {
-      console.error("Database fetch failed:", dbError);
-    }
-
-    // Fallback to blockchain data if database fails or returns empty
-    if (client) {
+    // If client is available (user is connected), fetch from contract
+    if (client && isConnected) {
       try {
+        setLoading(true);
+        toast({
+          title: "Fetching live data",
+          description: "Getting latest project information from blockchain...",
+        });
+
         const contractResponse = await client.queryContractSmart(
           contractAddress,
           {
@@ -189,29 +124,50 @@ const Projects = () => {
             owner_address: project.owner,
             skills_required: project.skills_required || [],
             status: project.status || "Open",
-            collaborator_count: 0,
+            collaborator_count: project.collaborator_count || 0,
             owner_name: "Unknown User",
             created_at: project.created_at || new Date().toISOString(),
           }));
 
-          console.log("Contract Response", contractResponse);
+          // Try to fetch additional details from DB
+          try {
+            const dbResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL}/api/projects`
+            );
+            const dbProjects = dbResponse.data || [];
 
-          setProjects(formattedProjects);
-        } else {
-          setProjects([]);
+            // Merge contract projects with DB details where available
+            const mergedProjects = formattedProjects.map((contractProject) => {
+              const dbProject = dbProjects.find(
+                (p) => p.project_id === contractProject.project_id
+              );
+              return dbProject
+                ? { ...contractProject, ...dbProject }
+                : contractProject;
+            });
+
+            setProjects(mergedProjects);
+          } catch (dbError) {
+            console.error("DB fetch failed:", dbError);
+            setProjects(formattedProjects);
+          }
         }
       } catch (contractError) {
         console.error("Contract fetch failed:", contractError);
-        setError("Failed to load projects from blockchain");
-        setProjects([]);
+        toast({
+          title: "Blockchain Error",
+          description: "Falling back to database records",
+          variant: "destructive",
+        });
+        await fetchFromDatabase();
       }
     } else {
-      setProjects([]);
-      setError("No data sources available");
+      // If no client, fetch from database
+      await fetchFromDatabase();
     }
 
     setLoading(false);
-  }, [client, contractAddress]);
+  }, [client, isConnected, toast]);
 
   useEffect(() => {
     getProjects();
@@ -225,22 +181,49 @@ const Projects = () => {
       project.description.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Filter by selected skills (if any)
+    const projectSkills = Array.isArray(project.skills_required)
+      ? project.skills_required
+      : [];
     const matchesSkills =
       selectedSkills.length === 0 ||
       selectedSkills.some((skill) =>
-        project.skills_required.some(
+        projectSkills.some(
           (projSkill) => projSkill.toLowerCase() === skill.toLowerCase()
         )
       );
 
-    // Filter by project type - adjust to use type field if available
-    const projectType = project.type || "Standard"; // Use a default if not available
+    // Filter by project type - fix comparison logic
+    const projectTypeValue = project.type || "Standard"; // Get project's type value
     const matchesType =
-      projectType === "all" ||
-      projectType.toLowerCase() === project.type?.toLowerCase();
+      projectType === "all" || // Using component state variable
+      projectTypeValue.toLowerCase() === projectType.toLowerCase();
 
     return matchesSearch && matchesSkills && matchesType;
   });
+
+  // Separate function for database fetching
+  const fetchFromDatabase = async () => {
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/projects`;
+      const dbResponse = await axios.get(apiUrl);
+
+      if (dbResponse.data) {
+        const formattedProjects = Array.isArray(dbResponse.data)
+          ? dbResponse.data.map((project) => ({
+              ...project,
+              contract_synced: false, // Flag to indicate it's from DB
+            }))
+          : [];
+
+        console.log(formattedProjects);
+        setProjects(formattedProjects);
+      }
+    } catch (dbError) {
+      console.error("Database fetch failed:", dbError);
+      setError("Failed to load projects");
+      setProjects([]);
+    }
+  };
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prev) =>
@@ -297,7 +280,7 @@ const Projects = () => {
     };
 
     try {
-      // First create project on-chain
+      // Step 1: Create project on-chain first
       const res = await client?.execute(
         account.bech32Address,
         contractAddress,
@@ -306,7 +289,7 @@ const Projects = () => {
       );
 
       setExecuteResult(res);
-      console.log("Transaction successful:", res);
+      console.log("On-chain transaction successful:", res);
 
       // Get project ID from events
       const projectId = res.events[11].attributes[2].value;
@@ -315,43 +298,55 @@ const Projects = () => {
         throw new Error("Failed to extract project ID from transaction");
       }
 
-      // Now save extended details in the database
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/projects`,
-        {
-          project_id: projectId,
-          title: formData.title,
-          description: formData.description,
-          skills_required: skillsArray,
-          repository_url: formData.repositoryUrl,
-          website_url: formData.websiteUrl,
-          status: "Open",
-        },
-        {
-          headers: {
-            "x-auth-token": token,
+      // Step 2: Once on-chain creation is successful, save to database
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/projects`,
+          {
+            project_id: projectId,
+            title: formData.title,
+            description: formData.description,
+            skills_required: skillsArray,
+            repository_url: formData.repositoryUrl,
+            website_url: formData.websiteUrl,
+            status: "Open",
           },
-        }
-      );
+          {
+            headers: {
+              "x-auth-token": token,
+            },
+          }
+        );
 
-      toast({
-        title: "Project created!",
-        description: "Your project has been successfully created.",
-      });
+        toast({
+          title: "Project created!",
+          description: "Your project has been successfully created.",
+        });
 
-      // Reset form
-      setFormData({
-        title: "",
-        description: "",
-        skillsRequired: "",
-        repositoryUrl: "",
-        websiteUrl: "",
-      });
+        // Reset form
+        setFormData({
+          title: "",
+          description: "",
+          skillsRequired: "",
+          repositoryUrl: "",
+          websiteUrl: "",
+        });
 
-      setIsCreateDialogOpen(false);
+        setIsCreateDialogOpen(false);
 
-      // Refresh projects after successful creation
-      await getProjects();
+        // Refresh projects after successful creation
+        await getProjects();
+      } catch (dbError) {
+        console.error("Database error:", dbError);
+        toast({
+          title: "Warning: Extra details not saved",
+          description:
+            "Your project was created on-chain, but additional details couldn't be saved to our database.",
+          variant: "warning",
+        });
+
+        setIsCreateDialogOpen(false);
+      }
     } catch (error) {
       console.error("Error creating project:", error);
       toast({
@@ -363,27 +358,6 @@ const Projects = () => {
     } finally {
       setIsCreatingProject(false);
     }
-  };
-
-  // Helper function to extract project ID from transaction logs
-  const extractProjectIdFromEvents = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    logs: readonly any[] | undefined
-  ): string | null => {
-    if (!logs || logs.length === 0) return null;
-
-    // Search for the project_id attribute in the events
-    for (const log of logs) {
-      for (const event of log.events) {
-        for (const attribute of event.attributes) {
-          if (attribute.key === "project_id") {
-            return attribute.value;
-          }
-        }
-      }
-    }
-
-    return null;
   };
 
   return (

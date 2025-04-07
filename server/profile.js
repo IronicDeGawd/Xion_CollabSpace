@@ -46,6 +46,7 @@ router.get("/", auth, async (req, res) => {
 // @access  Private
 router.put("/", auth, async (req, res) => {
   const { about, imageUrl } = req.body;
+  console.log("route: /profile, method : put");
 
   try {
     // Check if profile exists
@@ -54,7 +55,6 @@ router.put("/", auth, async (req, res) => {
     `;
 
     if (profileCheck.length === 0) {
-      // Create new profile
       await sql`
         INSERT INTO user_profiles (user_id, about, image_url)
         VALUES (${req.user.id}, ${about}, ${imageUrl})

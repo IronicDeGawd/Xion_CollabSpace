@@ -321,6 +321,54 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleRemoveCollaborator = async (userId: number) => {
+    if (!isAuthenticated || !token || !project) {
+      return;
+    }
+
+    // Verify ownership
+    if (user?.address !== project.owner_address) {
+      toast({
+        title: "Permission Denied",
+        description: "Only the project owner can remove collaborators",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/projects/${id}/collaborate/${userId}`,
+        {
+          headers: {
+            "x-auth-token": token,
+          },
+        }
+      );
+
+      // Update local state
+      setProject({
+        ...project,
+        collaborators: project.collaborators.filter(
+          (c) => c.user_id !== userId
+        ),
+      });
+
+      toast({
+        title: "Collaborator Removed",
+        description: "The collaborator has been removed from the project",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove collaborator",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -782,7 +830,7 @@ const ProjectDetail = () => {
                     .map((collaborator) => (
                       <div
                         key={collaborator.id}
-                        className="flex items-center gap-3"
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50"
                       >
                         <Avatar>
                           {collaborator.image_url ? (
@@ -801,6 +849,18 @@ const ProjectDetail = () => {
                             {collaborator.role}
                           </div>
                         </div>
+                        {isOwner && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() =>
+                              handleRemoveCollaborator(collaborator.user_id)
+                            }
+                          >
+                            Remove
+                          </Button>
+                        )}
                       </div>
                     ))}
 

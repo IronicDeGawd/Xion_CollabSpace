@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { User } from "@/types";
 
 // Define error response interface
@@ -30,6 +30,7 @@ interface AuthContextType {
   ) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  updateProfile: (bio: string, imageUrl: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -166,6 +167,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setToken(null);
   };
 
+  const updateProfile = async (
+    bio: string,
+    imageUrl: string
+  ): Promise<void> => {
+    try {
+      console.log("Called updateProfile");
+      setLoading(true);
+      const res = await api.put<User>(
+        "/api/profile",
+        { bio, imageUrl },
+        {
+          headers: {
+            "x-auth-token": token,
+          },
+        }
+      );
+      setUser(res.data);
+      setError(null);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ msg: string }>;
+      console.error(
+        "Profile update error:",
+        axiosError.response?.data?.msg || axiosError.message
+      );
+      setError(axiosError.response?.data?.msg || "Profile update failed");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -177,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         register,
         logout,
         isAuthenticated: !!token,
+        updateProfile,
       }}
     >
       {children}
