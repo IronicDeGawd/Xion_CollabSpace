@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+"use client";
+
+import type React from "react";
+import { useState, useEffect, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +21,6 @@ import {
   Users,
   Calendar,
   Filter,
-  Loader2,
   UserCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -33,7 +35,7 @@ import {
 } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useAbstraxionAccount,
   useAbstraxionSigningClient,
@@ -43,7 +45,8 @@ import ProjectFormDialog from "@/components/ProjectFormDialog";
 import type { ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import type { ExtendedProject, Project } from "@/types/index";
+import type { ExtendedProject } from "@/types/index";
+import { ProjectsSkeleton } from "@/components/loadingSkeletons/ProjectsSkeleton";
 
 type ExecuteResultOrUndefined = ExecuteResult | undefined;
 
@@ -360,10 +363,31 @@ const Projects = () => {
     }
   };
 
+  // Helper function to extract project ID from transaction logs
+  const extractProjectIdFromEvents = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    logs: readonly any[] | undefined
+  ): string | null => {
+    if (!logs || logs.length === 0) return null;
+
+    // Search for the project_id attribute in the events
+    for (const log of logs) {
+      for (const event of log.events) {
+        for (const attribute of event.attributes) {
+          if (attribute.key === "project_id") {
+            return attribute.value;
+          }
+        }
+      }
+    }
+
+    return null;
+  };
+
   return (
     <Layout>
       <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-in fade-in-50 slide-in-from-top-5 duration-300">
           <div>
             <h1 className="text-3xl font-bold">Projects</h1>
             <p className="text-muted-foreground">
@@ -435,12 +459,12 @@ const Projects = () => {
           </div>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 animate-in fade-in-50 slide-in-from-bottom-5 duration-300 delay-100">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search projects..."
-              className="pl-10"
+              className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -448,20 +472,38 @@ const Projects = () => {
         </div>
 
         <Tabs defaultValue="all" className="mb-6">
-          <TabsList>
-            <TabsTrigger value="all">All Projects</TabsTrigger>
-            <TabsTrigger value="trending">Trending</TabsTrigger>
-            <TabsTrigger value="recent">Recent</TabsTrigger>
-            {isConnected && <TabsTrigger value="saved">Saved</TabsTrigger>}
+          <TabsList className="transition-all duration-300">
+            <TabsTrigger
+              value="all"
+              className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+            >
+              All Projects
+            </TabsTrigger>
+            <TabsTrigger
+              value="trending"
+              className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+            >
+              Trending
+            </TabsTrigger>
+            <TabsTrigger
+              value="recent"
+              className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+            >
+              Recent
+            </TabsTrigger>
+            {isConnected && (
+              <TabsTrigger
+                value="saved"
+                className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+              >
+                Saved
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <ProjectCardSkeleton key={i} />
-            ))}
-          </div>
+          <ProjectsSkeleton />
         ) : error ? (
           <div className="text-center py-12">
             <div className="text-xl font-bold text-red-500">{error}</div>
@@ -474,7 +516,7 @@ const Projects = () => {
             {filteredProjects.map((project) => (
               <Card
                 key={project.project_id || project.id}
-                className="card-hover border border-border overflow-hidden"
+                className="card-hover border border-border overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:translate-y-[-5px]"
               >
                 <CardHeader>
                   <CardTitle className="text-foreground">
@@ -487,7 +529,11 @@ const Projects = () => {
                 <CardContent className="flex-grow">
                   <div className="flex flex-wrap gap-2 mb-4">
                     {project.skills_required.map((skill) => (
-                      <Badge key={skill} variant="secondary">
+                      <Badge
+                        key={skill}
+                        variant="secondary"
+                        className="transition-all duration-200 hover:bg-primary/20"
+                      >
                         {skill}
                       </Badge>
                     ))}
@@ -519,13 +565,16 @@ const Projects = () => {
                   </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4">
-                  <Button asChild className="w-full">
+                  <Button
+                    asChild
+                    className="w-full group transition-all duration-300 hover:shadow-md"
+                  >
                     <Link
                       to={`/projects/${project.project_id}`}
                       className="flex items-center justify-center gap-2"
                     >
                       View Details
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                     </Link>
                   </Button>
                 </CardFooter>

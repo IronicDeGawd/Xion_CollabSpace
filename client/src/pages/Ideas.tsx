@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+"use client";
+
+import { CardFooter } from "@/components/ui/card";
+
+import type React from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +11,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -21,7 +25,7 @@ import {
   MessageCircle,
   Tag,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +37,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
+import { IdeasSkeleton } from "@/components/loadingSkeletons/IdeasSkeleton";
 
 // Mock idea data
 const IDEAS = [
@@ -144,6 +149,16 @@ const Ideas = () => {
     null
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading delay
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Filter ideas based on search query
   const filteredIdeas = IDEAS.filter((idea) => {
@@ -179,8 +194,8 @@ const Ideas = () => {
 
   return (
     <Layout>
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="w-full max-w-full mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-in fade-in-50 slide-in-from-top-5 duration-300">
           <div>
             <h1 className="text-3xl font-bold">
               Project Ideas [Work in Progress]
@@ -198,12 +213,12 @@ const Ideas = () => {
           )}
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 animate-in fade-in-50 slide-in-from-bottom-5 duration-300 delay-100">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search ideas..."
-              className="pl-10"
+              className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -211,116 +226,137 @@ const Ideas = () => {
         </div>
 
         <Tabs defaultValue="popular" className="mb-6">
-          <TabsList>
-            <TabsTrigger value="popular">Popular</TabsTrigger>
-            <TabsTrigger value="recent">Recent</TabsTrigger>
-            <TabsTrigger value="trending">Trending</TabsTrigger>
+          <TabsList className="transition-all duration-300">
+            <TabsTrigger
+              value="popular"
+              className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+            >
+              Popular
+            </TabsTrigger>
+            <TabsTrigger
+              value="recent"
+              className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+            >
+              Recent
+            </TabsTrigger>
+            <TabsTrigger
+              value="trending"
+              className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+            >
+              Trending
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredIdeas.length > 0 ? (
-            filteredIdeas.map((idea) => (
-              <Card
-                key={idea.id}
-                className="card-hover h-full transition-all duration-300"
-              >
-                <CardHeader>
-                  <CardTitle className="group">
-                    <span className="transition-colors hover:text-web3-primary">
-                      {idea.title}
-                    </span>
-                  </CardTitle>
-                  <CardDescription className="line-clamp-3">
-                    {idea.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {idea.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="transition-colors hover:bg-web3-primary/20 hover:text-web3-primary"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <UserCircle className="h-4 w-4" />
-                      <span>{idea.createdBy}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{idea.createdAt}</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t pt-4">
-                  <div className="w-full flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1 group"
-                        onClick={(e) => toggleUpvote(idea.id, e)}
-                        disabled={!isConnected}
-                      >
-                        <ThumbsUp
-                          className={`h-4 w-4 transition-transform duration-300 ${
-                            upvotedIdeas.includes(idea.id)
-                              ? "fill-primary text-primary scale-125"
-                              : "group-hover:scale-110"
-                          }`}
-                        />
-                        <span>
-                          {upvotedIdeas.includes(idea.id)
-                            ? idea.upvotes + 1
-                            : idea.upvotes}
+        {loading ? (
+          <IdeasSkeleton />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+              {filteredIdeas.length > 0 ? (
+                filteredIdeas.map((idea) => (
+                  <Card
+                    key={idea.id}
+                    className="card-hover h-full transition-all hover:shadow-lg hover:border-primary/20 hover:translate-y-[-5px] animate-in fade-in-50 duration-500"
+                  >
+                    <CardHeader>
+                      <CardTitle className="group">
+                        <span className="transition-colors hover:text-web3-primary hover:underline decoration-dotted underline-offset-4">
+                          {idea.title}
                         </span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center gap-1 group"
-                      >
-                        <MessageSquare className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
-                        <span>{idea.comments}</span>
-                      </Button>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={(e) => openIdeaDetail(idea, e)}
-                      className="bg-web3-primary hover:bg-web3-primary/90 transition-all duration-300 btn-pulse"
-                    >
-                      View Details
-                    </Button>
+                      </CardTitle>
+                      <CardDescription className="line-clamp-3">
+                        {idea.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {idea.tags.map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="secondary"
+                            className="transition-colors hover:bg-web3-primary/20 hover:text-web3-primary hover:scale-105"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <UserCircle className="h-4 w-4" />
+                          <span>{idea.createdBy}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>{idea.createdAt}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="border-t pt-4">
+                      <div className="w-full flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex items-center gap-1 group transition-all duration-200"
+                            onClick={(e) => toggleUpvote(idea.id, e)}
+                            disabled={!isConnected}
+                          >
+                            <ThumbsUp
+                              className={`h-4 w-4 transition-all duration-300 ${
+                                upvotedIdeas.includes(idea.id)
+                                  ? "fill-primary text-primary scale-125 animate-pulse-subtle"
+                                  : "group-hover:scale-110 group-hover:rotate-12"
+                              }`}
+                            />
+                            <span>
+                              {upvotedIdeas.includes(idea.id)
+                                ? idea.upvotes + 1
+                                : idea.upvotes}
+                            </span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex items-center gap-1 group"
+                          >
+                            <MessageSquare className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                            <span>{idea.comments}</span>
+                          </Button>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={(e) => openIdeaDetail(idea, e)}
+                          className="bg-web3-primary hover:bg-web3-primary/90 transition-all duration-300 hover:shadow-md hover:shadow-web3-primary/20 hover:scale-105"
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <div className="text-muted-foreground">
+                    No ideas found matching your search
                   </div>
-                </CardFooter>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <div className="text-muted-foreground">
-                No ideas found matching your search
-              </div>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setSearchQuery("")}
-              >
-                Clear Search
-              </Button>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    Clear Search
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Idea Detail Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           {selectedIdea && (
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-2xl animate-in fade-in-50 zoom-in-95 duration-300">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold">
                   {selectedIdea.title}
@@ -395,7 +431,7 @@ const Ideas = () => {
                       <div className="space-y-4">
                         {getIdeaComments(selectedIdea.id).map((comment) => (
                           <div key={comment.id} className="flex gap-3">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-8 w-8 transition-all duration-300 hover:scale-110">
                               <AvatarFallback>
                                 {comment.author.substring(2, 4).toUpperCase()}
                               </AvatarFallback>

@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
+"use client";
+
+import { useEffect, useState, useRef } from "react";
 import Layout from "@/components/Layout";
 import { Link } from "react-router-dom";
 import {
@@ -26,9 +28,9 @@ import {
 import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { User } from "@/types";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { useToast } from "@/components/ui/use-toast";
+import { ProfileSkeleton } from "@/components/loadingSkeletons/ProfileSkeleton";
 
 interface Project {
   project_id: string;
@@ -55,6 +57,13 @@ const Profile = () => {
   const fetchedRef = useRef(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+    }, 500);
+  }, []);
 
   // Format date to readable string
   const formatDate = (dateString?: string) => {
@@ -164,126 +173,276 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Profile Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="bg-card border border-border">
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage
-                      src={userData.image_url || undefined}
-                      alt={userData.name}
-                    />
-                    <AvatarFallback className="text-2xl bg-secondary text-primary">
-                      {userData.name.substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-                <CardTitle>{userData.name}</CardTitle>
-                <CardDescription>Web3 Developer</CardDescription>
-                <div className="mt-2">
-                  <Badge
-                    variant="outline"
-                    className="flex items-center gap-1 mx-auto p-2"
-                  >
-                    <Wallet className="h-4 w-7" />
-                    <span className="line-clamp-2">
-                      {address.bech32Address}
-                    </span>
-                    <span>...</span>
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm font-medium">
-                        XP: {userData.xp}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {userData.xpProgress}%
-                      </span>
-                    </div>
-                    <Progress value={userData.xpProgress} className="h-2" />
+      <div className="w-full max-w-full mx-auto">
+        {loading ? (
+          <ProfileSkeleton />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Profile Sidebar */}
+            <div className="lg:col-span-1">
+              <Card className="bg-card border border-border transition-all duration-300 hover:shadow-md hover:border-primary/20">
+                <CardHeader className="text-center">
+                  <div className="mx-auto mb-4">
+                    <Avatar className="w-24 h-24 transition-all duration-500 hover:scale-105 hover:shadow-lg hover:shadow-primary/10">
+                      <AvatarImage
+                        src={userData.image_url || undefined}
+                        alt={userData.name}
+                      />
+                      <AvatarFallback className="text-2xl bg-secondary text-primary">
+                        {userData.name.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{userData.email}</span>
-                      {userData.verifiedEmail && (
-                        <Badge variant="outline" className="ml-auto text-xs">
-                          Verified
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        Joined {userData.joinedDate}
+                  <CardTitle>{userData.name}</CardTitle>
+                  <CardDescription>Web3 Developer</CardDescription>
+                  <div className="mt-2">
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 mx-auto p-2 transition-all duration-300 hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      <Wallet className="h-4 w-7" />
+                      <span className="line-clamp-2">
+                        {address.bech32Address}
                       </span>
-                    </div>
+                      <span>...</span>
+                    </Badge>
                   </div>
-
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="sm"
-                    onClick={() => setIsEditProfileOpen(true)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Profile Content */}
-          <div className="lg:col-span-3">
-            <Tabs defaultValue="overview">
-              <TabsList className="w-full mb-6">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="projects">Projects</TabsTrigger>
-                <TabsTrigger value="contributions">Contributions</TabsTrigger>
-                <TabsTrigger value="achievements">Achievements</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview">
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>About</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>{userData.bio}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Skills</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {userData.skills.map((skill) => (
-                          <Badge key={skill} variant="secondary">
-                            {skill}
-                          </Badge>
-                        ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium">
+                          XP: {userData.xp}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {userData.xpProgress}%
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <Progress
+                        value={userData.xpProgress}
+                        className="h-2 transition-all duration-1000 animate-pulse-subtle"
+                      />
+                    </div>
 
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{userData.email}</span>
+                        {userData.verifiedEmail && (
+                          <Badge variant="outline" className="ml-auto text-xs">
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">
+                          Joined {userData.joinedDate}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                      onClick={() => setIsEditProfileOpen(true)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Profile Content */}
+            <div className="lg:col-span-3">
+              <Tabs defaultValue="overview">
+                <TabsList className="w-full mb-6 transition-all duration-300">
+                  <TabsTrigger
+                    value="overview"
+                    className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="projects"
+                    className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                  >
+                    Projects
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="contributions"
+                    className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                  >
+                    Contributions
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="achievements"
+                    className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                  >
+                    Achievements
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent
+                  value="overview"
+                  className="animate-in fade-in-50 duration-300"
+                >
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>About</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p>{userData.bio}</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Skills</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {userData.skills.map((skill) => (
+                            <Badge key={skill} variant="secondary">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row justify-between items-center">
+                        <CardTitle>Recent Projects</CardTitle>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to="/projects">View All</Link>
+                        </Button>
+                      </CardHeader>
+                      <CardContent>
+                        {projectsLoading ? (
+                          <div className="flex justify-center py-4">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          </div>
+                        ) : userProjects.owned.length > 0 ||
+                          userProjects.collaborating.length > 0 ? (
+                          <div className="space-y-4">
+                            {/* Owned projects */}
+                            {userProjects.owned.slice(0, 2).map((project) => (
+                              <div
+                                key={project.project_id}
+                                className="p-4 border rounded-lg transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:bg-accent/30"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h3 className="font-medium">
+                                      {project.title}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      {project.description.length > 100
+                                        ? `${project.description.substring(
+                                            0,
+                                            100
+                                          )}...`
+                                        : project.description}
+                                    </p>
+                                  </div>
+                                  <Badge>{project.status}</Badge>
+                                </div>
+                                <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                                  <Briefcase className="h-4 w-4 mr-1" />
+                                  <span>Role: Owner</span>
+                                </div>
+                                <div className="mt-2">
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link
+                                      to={`/projects/${project.project_id}`}
+                                    >
+                                      View Project
+                                    </Link>
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Collaborating projects */}
+                            {userProjects.collaborating
+                              .slice(0, 2)
+                              .map((project) => (
+                                <div
+                                  key={project.project_id}
+                                  className="p-4 border rounded-lg transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:bg-accent/30"
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <h3 className="font-medium">
+                                        {project.title}
+                                      </h3>
+                                      <p className="text-sm text-muted-foreground">
+                                        {project.description.length > 100
+                                          ? `${project.description.substring(
+                                              0,
+                                              100
+                                            )}...`
+                                          : project.description}
+                                      </p>
+                                    </div>
+                                    <Badge
+                                      variant={
+                                        project.collaboration_status ===
+                                        "Approved"
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                    >
+                                      {project.collaboration_status}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                                    <Briefcase className="h-4 w-4 mr-1" />
+                                    <span>Role: {project.role}</span>
+                                  </div>
+                                  <div className="mt-2">
+                                    <Button variant="ghost" size="sm" asChild>
+                                      <Link
+                                        to={`/projects/${project.project_id}`}
+                                      >
+                                        View Project
+                                      </Link>
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            You haven't created or joined any projects yet.
+                            <div className="mt-2">
+                              <Button asChild>
+                                <Link to="/projects">Browse Projects</Link>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="projects"
+                  className="animate-in fade-in-50 duration-300"
+                >
                   <Card>
-                    <CardHeader className="flex flex-row justify-between items-center">
-                      <CardTitle>Recent Projects</CardTitle>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to="/projects">View All</Link>
-                      </Button>
+                    <CardHeader>
+                      <CardTitle>My Projects</CardTitle>
+                      <CardDescription>
+                        Projects you've created or are contributing to
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       {projectsLoading ? (
@@ -294,10 +453,10 @@ const Profile = () => {
                         userProjects.collaborating.length > 0 ? (
                         <div className="space-y-4">
                           {/* Owned projects */}
-                          {userProjects.owned.slice(0, 2).map((project) => (
+                          {userProjects.owned.map((project) => (
                             <div
                               key={project.project_id}
-                              className="p-4 border rounded-lg"
+                              className="p-4 border rounded-lg transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:bg-accent/30"
                             >
                               <div className="flex justify-between items-start">
                                 <div>
@@ -330,53 +489,48 @@ const Profile = () => {
                           ))}
 
                           {/* Collaborating projects */}
-                          {userProjects.collaborating
-                            .slice(0, 2)
-                            .map((project) => (
-                              <div
-                                key={project.project_id}
-                                className="p-4 border rounded-lg"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <h3 className="font-medium">
-                                      {project.title}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                      {project.description.length > 100
-                                        ? `${project.description.substring(
-                                            0,
-                                            100
-                                          )}...`
-                                        : project.description}
-                                    </p>
-                                  </div>
-                                  <Badge
-                                    variant={
-                                      project.collaboration_status ===
-                                      "Approved"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                  >
-                                    {project.collaboration_status}
-                                  </Badge>
+                          {userProjects.collaborating.map((project) => (
+                            <div
+                              key={project.project_id}
+                              className="p-4 border rounded-lg transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:bg-accent/30"
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium">
+                                    {project.title}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {project.description.length > 100
+                                      ? `${project.description.substring(
+                                          0,
+                                          100
+                                        )}...`
+                                      : project.description}
+                                  </p>
                                 </div>
-                                <div className="mt-2 flex items-center text-sm text-muted-foreground">
-                                  <Briefcase className="h-4 w-4 mr-1" />
-                                  <span>Role: {project.role}</span>
-                                </div>
-                                <div className="mt-2">
-                                  <Button variant="ghost" size="sm" asChild>
-                                    <Link
-                                      to={`/projects/${project.project_id}`}
-                                    >
-                                      View Project
-                                    </Link>
-                                  </Button>
-                                </div>
+                                <Badge
+                                  variant={
+                                    project.collaboration_status === "Approved"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                >
+                                  {project.collaboration_status}
+                                </Badge>
                               </div>
-                            ))}
+                              <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                                <Briefcase className="h-4 w-4 mr-1" />
+                                <span>Role: {project.role}</span>
+                              </div>
+                              <div className="mt-2">
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link to={`/projects/${project.project_id}`}>
+                                    View Project
+                                  </Link>
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
@@ -390,160 +544,60 @@ const Profile = () => {
                       )}
                     </CardContent>
                   </Card>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              <TabsContent value="projects">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>My Projects</CardTitle>
-                    <CardDescription>
-                      Projects you've created or are contributing to
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {projectsLoading ? (
-                      <div className="flex justify-center py-4">
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                      </div>
-                    ) : userProjects.owned.length > 0 ||
-                      userProjects.collaborating.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Owned projects */}
-                        {userProjects.owned.map((project) => (
-                          <div
-                            key={project.project_id}
-                            className="p-4 border rounded-lg"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-medium">{project.title}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {project.description.length > 100
-                                    ? `${project.description.substring(
-                                        0,
-                                        100
-                                      )}...`
-                                    : project.description}
-                                </p>
-                              </div>
-                              <Badge>{project.status}</Badge>
-                            </div>
-                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
-                              <Briefcase className="h-4 w-4 mr-1" />
-                              <span>Role: Owner</span>
-                            </div>
-                            <div className="mt-2">
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link to={`/projects/${project.project_id}`}>
-                                  View Project
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                <TabsContent
+                  value="contributions"
+                  className="animate-in fade-in-50 duration-300"
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Contributions</CardTitle>
+                      <CardDescription>
+                        Your contributions to projects and ideas
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-center py-12">
+                      <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">
+                        No contributions yet
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Join a project or submit ideas to start building your
+                        contribution history
+                      </p>
+                      <Button className="mt-4">Browse Projects</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                        {/* Collaborating projects */}
-                        {userProjects.collaborating.map((project) => (
-                          <div
-                            key={project.project_id}
-                            className="p-4 border rounded-lg"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-medium">{project.title}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {project.description.length > 100
-                                    ? `${project.description.substring(
-                                        0,
-                                        100
-                                      )}...`
-                                    : project.description}
-                                </p>
-                              </div>
-                              <Badge
-                                variant={
-                                  project.collaboration_status === "Approved"
-                                    ? "default"
-                                    : "outline"
-                                }
-                              >
-                                {project.collaboration_status}
-                              </Badge>
-                            </div>
-                            <div className="mt-2 flex items-center text-sm text-muted-foreground">
-                              <Briefcase className="h-4 w-4 mr-1" />
-                              <span>Role: {project.role}</span>
-                            </div>
-                            <div className="mt-2">
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link to={`/projects/${project.project_id}`}>
-                                  View Project
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        You haven't created or joined any projects yet.
-                        <div className="mt-2">
-                          <Button asChild>
-                            <Link to="/projects">Browse Projects</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="contributions">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Contributions</CardTitle>
-                    <CardDescription>
-                      Your contributions to projects and ideas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-center py-12">
-                    <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">
-                      No contributions yet
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Join a project or submit ideas to start building your
-                      contribution history
-                    </p>
-                    <Button className="mt-4">Browse Projects</Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="achievements">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Achievements</CardTitle>
-                    <CardDescription>
-                      Your on-chain badges and achievements
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-center py-12">
-                    <Award className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">
-                      No achievements yet
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Complete projects and earn XP to unlock achievements
-                    </p>
-                    <Button className="mt-4">Browse Projects</Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                <TabsContent
+                  value="achievements"
+                  className="animate-in fade-in-50 duration-300"
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Achievements</CardTitle>
+                      <CardDescription>
+                        Your on-chain badges and achievements
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-center py-12">
+                      <Award className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium mb-2">
+                        No achievements yet
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Complete projects and earn XP to unlock achievements
+                      </p>
+                      <Button className="mt-4">Browse Projects</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <ProfileEditDialog
         open={isEditProfileOpen}

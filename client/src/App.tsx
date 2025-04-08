@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AbstraxionProvider } from "@burnt-labs/abstraxion";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
@@ -21,6 +21,47 @@ import React from "react";
 
 const queryClient = new QueryClient();
 
+// Page transition component
+const PageTransition = ({ children }) => {
+  const location = useLocation();
+
+  return (
+    <div key={location.pathname} className="page-transition-wrapper">
+      {children}
+    </div>
+  );
+};
+
+const AppRoutes = () => {
+  return (
+    <PageTransition>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/ideas" element={<Ideas />} />
+        <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </PageTransition>
+  );
+};
+
 const App = () => (
   <AbstraxionProvider config={treasuryConfig}>
     <QueryClientProvider client={queryClient}>
@@ -30,29 +71,7 @@ const App = () => (
             <TooltipProvider>
               <BrowserRouter>
                 <div className="app-container">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/projects" element={<Projects />} />
-                    <Route path="/ideas" element={<Ideas />} />
-                    <Route path="/projects/:id" element={<ProjectDetail />} />
-                    <Route
-                      path="/profile"
-                      element={
-                        <PrivateRoute>
-                          <Profile />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/dashboard"
-                      element={
-                        <PrivateRoute>
-                          <Dashboard />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                  <AppRoutes />
                 </div>
                 <Toaster />
               </BrowserRouter>

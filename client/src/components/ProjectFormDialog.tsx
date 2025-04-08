@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+"use client";
+
+import type React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,7 +44,7 @@ export default function ProjectFormDialog({
 }: ProjectFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-card">
+      <DialogContent className="sm:max-w-[500px] bg-card transition-all duration-300 animate-in fade-in-50 slide-in-from-bottom-10">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>
@@ -60,7 +62,7 @@ export default function ProjectFormDialog({
                 onChange={handleChange}
                 placeholder="Enter project title"
                 required
-                className="bg-input text-foreground"
+                className="bg-input text-foreground transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="grid gap-2">
@@ -71,7 +73,7 @@ export default function ProjectFormDialog({
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Describe your project, goals, and what kind of help you need..."
-                className="min-h-[120px] bg-input text-foreground"
+                className="min-h-[120px] bg-input text-foreground transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 required
               />
             </div>
@@ -86,7 +88,7 @@ export default function ProjectFormDialog({
                 onChange={handleChange}
                 placeholder="React, Solidity, TypeScript..."
                 required
-                className="bg-input text-foreground"
+                className="bg-input text-foreground transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
@@ -94,30 +96,30 @@ export default function ProjectFormDialog({
               <Label htmlFor="repositoryUrl">
                 GitHub Repository URL (optional)
               </Label>
-              <div className="relative">
-                <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="relative group">
+                <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-all duration-300 group-focus-within:text-primary" />
                 <Input
                   id="repositoryUrl"
                   name="repositoryUrl"
                   value={formData.repositoryUrl || ""}
                   onChange={handleChange}
                   placeholder="https://github.com/username/repo"
-                  className="pl-10 bg-input text-foreground"
+                  className="pl-10 bg-input text-foreground transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="websiteUrl">Project Website URL (optional)</Label>
-              <div className="relative">
-                <Link2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="relative group">
+                <Link2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-all duration-300 group-focus-within:text-primary" />
                 <Input
                   id="websiteUrl"
                   name="websiteUrl"
                   value={formData.websiteUrl || ""}
                   onChange={handleChange}
                   placeholder="https://your-project.com"
-                  className="pl-10 bg-input text-foreground"
+                  className="pl-10 bg-input text-foreground transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -127,10 +129,15 @@ export default function ProjectFormDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              className="transition-all duration-200 hover:bg-background/80"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="transition-all duration-200 relative overflow-hidden"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {loading ? "Creating..." : "Create Project"}
             </Button>

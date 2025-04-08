@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+"use client";
+
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +58,7 @@ export default function ProfileEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md animate-in fade-in-50 slide-in-from-bottom-10 duration-300">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
@@ -71,6 +73,7 @@ export default function ProfileEditDialog({
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://example.com/your-image.jpg"
+              className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
             />
             <p className="text-xs text-muted-foreground">
               Enter a URL for your profile picture
@@ -83,7 +86,7 @@ export default function ProfileEditDialog({
               value={about}
               onChange={(e) => setAbout(e.target.value)}
               placeholder="Tell us about yourself and your experience in Web3 development"
-              className="min-h-[120px]"
+              className="min-h-[120px] transition-all duration-200 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -92,10 +95,15 @@ export default function ProfileEditDialog({
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
+            className="transition-all duration-200 hover:bg-background/80"
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSaving}>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="transition-all duration-300 hover:shadow-md hover:shadow-primary/20"
+          >
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>

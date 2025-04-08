@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
@@ -6,9 +8,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -39,8 +41,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ProjectDetailSkeleton } from "@/components/loadingSkeletons/ProjectDetailSkeleton";
 
-// Define a more detailed project type
 interface ProjectDetail {
   project_id: string;
   title: string;
@@ -81,7 +83,6 @@ const ProjectDetail = () => {
   );
   const { toast } = useToast();
 
-  // Fetch project details
   useEffect(() => {
     const fetchProject = async () => {
       if (!id) {
@@ -90,18 +91,16 @@ const ProjectDetail = () => {
         return;
       }
 
-      // Check cache first
       const cachedProject = sessionStorage.getItem(`project-${id}`);
       const cacheTime = sessionStorage.getItem(`project-${id}-time`);
       const isCacheValid =
-        cacheTime && Date.now() - parseInt(cacheTime) < 5 * 60 * 1000; // 5 minute cache
+        cacheTime && Date.now() - Number.parseInt(cacheTime) < 5 * 60 * 1000;
 
       if (cachedProject && isCacheValid) {
         try {
           const parsedProject = JSON.parse(cachedProject);
           setProject(parsedProject);
 
-          // Check for collaborator status
           if (isAuthenticated && user) {
             const userCollaborator = parsedProject.collaborators?.find(
               (c) => c.address === user.address
@@ -110,13 +109,10 @@ const ProjectDetail = () => {
           }
 
           setLoading(false);
-
-          // Still fetch in background to update cache
           fetchAndCacheProject();
           return;
         } catch (e) {
           console.error("Cache parsing error:", e);
-          // Continue with normal fetch if cache parsing fails
         }
       }
 
@@ -124,16 +120,12 @@ const ProjectDetail = () => {
       await fetchAndCacheProject();
     };
 
-    // Helper function to fetch and cache
     const fetchAndCacheProject = async () => {
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/projects/${id}`
         );
 
-        console.log("Project detail response:", response.data);
-
-        // Normalize the project data to ensure all fields exist
         const projectData: ProjectDetail = {
           project_id: response.data.project_id || id || "",
           title: response.data.title || "Untitled Project",
@@ -155,8 +147,6 @@ const ProjectDetail = () => {
         };
 
         setProject(projectData);
-
-        // Cache the project data
         sessionStorage.setItem(`project-${id}`, JSON.stringify(projectData));
         sessionStorage.setItem(`project-${id}-time`, Date.now().toString());
 
@@ -235,7 +225,6 @@ const ProjectDetail = () => {
       return;
     }
 
-    // Verify ownership
     if (user?.address !== project.owner_address) {
       toast({
         title: "Permission Denied",
@@ -282,7 +271,6 @@ const ProjectDetail = () => {
       return;
     }
 
-    // Verify ownership
     if (user?.address !== project.owner_address) {
       return;
     }
@@ -300,7 +288,6 @@ const ProjectDetail = () => {
         }
       );
 
-      // Update collaborator in local state
       setProject({
         ...project,
         collaborators: project.collaborators.map((c) =>
@@ -326,7 +313,6 @@ const ProjectDetail = () => {
       return;
     }
 
-    // Verify ownership
     if (user?.address !== project.owner_address) {
       toast({
         title: "Permission Denied",
@@ -348,7 +334,6 @@ const ProjectDetail = () => {
         }
       );
 
-      // Update local state
       setProject({
         ...project,
         collaborators: project.collaborators.filter(
@@ -372,10 +357,8 @@ const ProjectDetail = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+        <div className="w-full">
+          <ProjectDetailSkeleton />
         </div>
       </Layout>
     );
@@ -384,7 +367,7 @@ const ProjectDetail = () => {
   if (error || !project) {
     return (
       <Layout>
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full">
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold">Error</h2>
             <p className="text-muted-foreground mt-2">
@@ -399,28 +382,18 @@ const ProjectDetail = () => {
     );
   }
 
-  // Is user the owner?
   const isOwner = isAuthenticated && user?.address === project.owner_address;
-
-  // Can user request to join?
   const canRequestToJoin = isAuthenticated && !isOwner && !collaborationStatus;
-
-  // Does user have a pending request?
   const hasPendingRequest = collaborationStatus === "Pending";
-
-  // Is user an approved collaborator?
   const isCollaborator = collaborationStatus === "Approved";
-
-  // Are there pending collaboration requests?
   const pendingRequests = project.collaborators.filter(
     (c) => c.status === "Pending"
   );
 
   return (
     <Layout>
-      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
-        {/* Project header with status badge and controls */}
-        <div className="mb-6">
+      <div className="w-full">
+        <div className="mb-6 animate-in fade-in-50 slide-in-from-top-5 duration-300">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold gradient-text">
@@ -434,13 +407,13 @@ const ProjectDetail = () => {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "transition-colors duration-300",
+                    "transition-all duration-500 hover:scale-105",
                     project.status === "Open" &&
-                      "border-green-500/50 text-green-500",
+                      "border-green-500/50 text-green-500 hover:bg-green-500/10",
                     project.status === "In Progress" &&
-                      "border-blue-500/50 text-blue-500",
+                      "border-blue-500/50 text-blue-500 hover:bg-blue-500/10",
                     project.status === "Completed" &&
-                      "border-purple-500/50 text-purple-500"
+                      "border-purple-500/50 text-purple-500 hover:bg-purple-500/10"
                   )}
                 >
                   {project.status}
@@ -449,12 +422,14 @@ const ProjectDetail = () => {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/5 hover:border-primary/30"
+              >
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
 
-              {/* Project status dropdown for owner */}
               {isOwner && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -484,7 +459,6 @@ const ProjectDetail = () => {
                 </DropdownMenu>
               )}
 
-              {/* Request to join button */}
               {canRequestToJoin && (
                 <Button
                   className="flex items-center gap-2"
@@ -495,7 +469,6 @@ const ProjectDetail = () => {
                 </Button>
               )}
 
-              {/* Pending request indicator */}
               {hasPendingRequest && (
                 <Button disabled className="flex items-center gap-2">
                   <Clock className="h-4 w-4 animate-pulse" />
@@ -503,7 +476,6 @@ const ProjectDetail = () => {
                 </Button>
               )}
 
-              {/* Collaborator indicator */}
               {isCollaborator && (
                 <Button variant="outline" className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
@@ -515,25 +487,42 @@ const ProjectDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="overview">
-              <TabsList className="w-full mb-6">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="tasks">Tasks</TabsTrigger>
-                <TabsTrigger value="discussion">Discussion</TabsTrigger>
-                {isOwner && (
-                  <TabsTrigger value="requests">
-                    Requests{" "}
-                    {pendingRequests.length > 0 &&
-                      `(${pendingRequests.length})`}
-                  </TabsTrigger>
-                )}
+              <TabsList className="w-full mb-6 transition-all duration-300">
+                <TabsTrigger
+                  value="overview"
+                  className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="tasks"
+                  className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                >
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger
+                  value="discussion"
+                  className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                >
+                  Discussion
+                </TabsTrigger>
+                <TabsTrigger
+                  value="requests"
+                  className="transition-all duration-200 data-[state=active]:animate-in data-[state=active]:fade-in-50"
+                >
+                  Requests{" "}
+                  {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview">
+              <TabsContent
+                value="overview"
+                className="animate-in fade-in-50 duration-300"
+              >
                 <div className="space-y-6">
-                  <Card>
+                  <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
                     <CardHeader>
                       <CardTitle>Project Description</CardTitle>
                     </CardHeader>
@@ -544,7 +533,7 @@ const ProjectDetail = () => {
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
                     <CardHeader>
                       <CardTitle>Required Skills</CardTitle>
                     </CardHeader>
@@ -557,16 +546,14 @@ const ProjectDetail = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Show collaborators */}
-                  <Card>
+                  <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
                     <CardHeader>
                       <CardTitle>Team</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {/* Project Owner */}
                         <div className="flex items-center gap-3">
-                          <Avatar>
+                          <Avatar className="transition-all duration-300 hover:scale-110">
                             {project.owner_image ? (
                               <AvatarImage
                                 src={project.owner_image}
@@ -581,6 +568,7 @@ const ProjectDetail = () => {
                             <div className="font-medium">
                               {project.owner_name}
                             </div>
+
                             <div className="text-xs text-muted-foreground">
                               Project Owner
                             </div>
@@ -588,15 +576,14 @@ const ProjectDetail = () => {
                           <Badge>Owner</Badge>
                         </div>
 
-                        {/* Collaborators */}
                         {project.collaborators
                           .filter((c) => c.status === "Approved")
                           .map((collaborator) => (
                             <div
                               key={collaborator.id}
-                              className="flex items-center gap-3"
+                              className="flex items-center gap-3 p-2 rounded-lg transition-all duration-200 hover:bg-accent/50"
                             >
-                              <Avatar>
+                              <Avatar className="transition-all duration-300 hover:scale-110">
                                 {collaborator.image_url ? (
                                   <AvatarImage
                                     src={collaborator.image_url}
@@ -619,7 +606,6 @@ const ProjectDetail = () => {
                             </div>
                           ))}
 
-                        {/* Show message if no collaborators yet */}
                         {project.collaborators.filter(
                           (c) => c.status === "Approved"
                         ).length === 0 && (
@@ -633,16 +619,26 @@ const ProjectDetail = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="tasks">{/* Tasks content */}</TabsContent>
+              <TabsContent
+                value="tasks"
+                className="animate-in fade-in-50 duration-300"
+              >
+                {/* Tasks content */}
+              </TabsContent>
 
-              <TabsContent value="discussion">
+              <TabsContent
+                value="discussion"
+                className="animate-in fade-in-50 duration-300"
+              >
                 {/* Discussion content */}
               </TabsContent>
 
-              {/* Collaboration Requests Tab (for project owner) */}
               {isOwner && (
-                <TabsContent value="requests">
-                  <Card>
+                <TabsContent
+                  value="requests"
+                  className="animate-in fade-in-50 duration-300"
+                >
+                  <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
                     <CardHeader>
                       <CardTitle>Collaboration Requests</CardTitle>
                       <CardDescription>
@@ -655,10 +651,10 @@ const ProjectDetail = () => {
                           {pendingRequests.map((request) => (
                             <div
                               key={request.id}
-                              className="p-4 border rounded-lg"
+                              className="p-4 border rounded-lg transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:bg-accent/30"
                             >
                               <div className="flex items-center gap-3 mb-4">
-                                <Avatar>
+                                <Avatar className="transition-all duration-300 hover:scale-110">
                                   {request.image_url ? (
                                     <AvatarImage
                                       src={request.image_url}
@@ -720,15 +716,14 @@ const ProjectDetail = () => {
             </Tabs>
           </div>
 
-          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
               <CardHeader>
                 <CardTitle>Project Owner</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <Avatar>
+                  <Avatar className="transition-all duration-300 hover:scale-110">
                     {project.owner_image ? (
                       <AvatarImage
                         src={project.owner_image}
@@ -753,8 +748,7 @@ const ProjectDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Project links */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
               <CardHeader>
                 <CardTitle>Project Links</CardTitle>
               </CardHeader>
@@ -818,8 +812,7 @@ const ProjectDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Team members card */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
               <CardHeader>
                 <CardTitle>Team Members</CardTitle>
               </CardHeader>
@@ -830,9 +823,9 @@ const ProjectDetail = () => {
                     .map((collaborator) => (
                       <div
                         key={collaborator.id}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50"
+                        className="flex items-center gap-3 p-2 rounded-lg transition-all duration-200 hover:bg-accent/50"
                       >
-                        <Avatar>
+                        <Avatar className="transition-all duration-300 hover:scale-110">
                           {collaborator.image_url ? (
                             <AvatarImage
                               src={collaborator.image_url}
@@ -886,7 +879,6 @@ const ProjectDetail = () => {
                     </span>
                   </div>
 
-                  {/* Request to join button */}
                   {canRequestToJoin && (
                     <Button
                       variant="outline"
