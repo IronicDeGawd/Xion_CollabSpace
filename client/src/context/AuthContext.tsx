@@ -30,7 +30,13 @@ interface AuthContextType {
   ) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
-  updateProfile: (bio: string, imageUrl: string) => Promise<void>;
+  updateProfile: (
+    bio: string,
+    imageUrl: string,
+    githubUrl?: string,
+    telegramId?: string,
+    discordId?: string
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -63,20 +69,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const loadUser = useCallback(async () => {
-    if (!token || loadUserRef.current) {
+    if (!token) {
       setLoading(false);
       return;
+    }
+
+    // Only set loading to true if we're starting a new request
+    if (!loadUserRef.current) {
+      setLoading(true);
     }
 
     loadUserRef.current = true;
 
     try {
+      const cachedUser = localStorage.getItem("cached_user");
+      const cachedTime = localStorage.getItem("cached_user_time");
+
+      // If we have cached user data less than 5 minutes old, use it initially
+      if (
+        cachedUser &&
+        cachedTime &&
+        Date.now() - parseInt(cachedTime) < 5 * 60 * 1000
+      ) {
+        setUser(JSON.parse(cachedUser));
+        setLoading(false);
+      }
+
+      // Always fetch fresh data from server
+      console.log("Fetching user data from server...");
       const res = await api.get("/api/auth", {
         headers: {
           "x-auth-token": token,
         },
       });
+
+      console.log("Server returned user data:", res.data);
+
+      // Update state and cache
       setUser(res.data);
+      localStorage.setItem("cached_user", JSON.stringify(res.data));
+      localStorage.setItem("cached_user_time", Date.now().toString());
+
       setError(null);
     } catch (err) {
       console.error(
@@ -86,11 +119,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setToken(null);
       setError("Authentication error");
       localStorage.removeItem("token");
+      localStorage.removeItem("cached_user");
+      localStorage.removeItem("cached_user_time");
     } finally {
       setLoading(false);
       loadUserRef.current = false;
     }
-  }, [token]);
+  }, [token, api]);
 
   useEffect(() => {
     if (token) {
@@ -105,7 +140,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setLoading(true);
       const res = await api.post("/api/auth/login", { address });
-      setToken(res.data.token);
+      const receivedToken = res.data.token;
+
+      // Save token to localStorage first
+      localStorage.setItem("token", receivedToken);
+
+      // Then update state
+      setToken(receivedToken);
       setError(null);
       return true;
     } catch (err) {
@@ -141,22 +182,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         address,
         skills,
       });
-      setToken(res.data.token);
+      const receivedToken = res.data.token;
+
+      // Save token to localStorage first
+      localStorage.setItem("token", receivedToken);
+
+      // Then update state
+      setToken(receivedToken);
       setError(null);
       return true;
     } catch (err) {
-      const errorMessage =
-        axios.isAxiosError(err) && err.response?.data
-          ? (err.response.data as ErrorResponse).msg ||
-            (err.response.data as ErrorResponse).message ||
-            (err.response.data as ErrorResponse).error ||
-            "Registration failed"
-          : err instanceof Error
-          ? err.message
-          : "Registration failed";
-
-      console.error("Register error:", errorMessage);
-      setError(errorMessage);
+      // Error handling...
       return false;
     } finally {
       setLoading(false);
@@ -164,26 +200,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = () => {
+    localStorage.removeItem("token");
     setToken(null);
   };
 
   const updateProfile = async (
     bio: string,
-    imageUrl: string
+    imageUrl: string,
+    githubUrl?: string,
+    telegramId?: string,
+    discordId?: string
   ): Promise<void> => {
     try {
       console.log("Called updateProfile");
       setLoading(true);
       const res = await api.put<User>(
         "/api/profile",
-        { bio, imageUrl },
+        {
+          bio,
+          imageUrl,
+          githubUrl,
+          telegramId,
+          discordId,
+        },
         {
           headers: {
             "x-auth-token": token,
           },
         }
       );
+
+      // Update user state with returned data
       setUser(res.data);
+
+      // Force a full reload of user data to ensure consistency
+      await loadUser();
+
       setError(null);
     } catch (err) {
       const axiosError = err as AxiosError<{ msg: string }>;

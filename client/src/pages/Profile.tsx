@@ -59,11 +59,19 @@ const Profile = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
+  // Manage loading state based on auth status
   useEffect(() => {
-    setTimeout(() => {
+    // Only show loading if we're connected and have a token but user data is still loading
+    if (isConnected && localStorage.getItem("token") && !user) {
+      setLoading(true);
+    } else {
       setLoading(false);
-    }, 500);
-  }, []);
+    }
+  }, [isConnected, user]);
+
+  useEffect(() => {
+    console.log("Current user data:", user);
+  }, [user]);
 
   // Format date to readable string
   const formatDate = (dateString?: string) => {
@@ -76,9 +84,15 @@ const Profile = () => {
   };
 
   // Handle profile update
-  const handleUpdateProfile = async (bio: string, imageUrl: string) => {
+  const handleUpdateProfile = async (
+    bio: string,
+    imageUrl: string,
+    githubUrl?: string,
+    telegramId?: string,
+    discordId?: string
+  ) => {
     try {
-      await updateProfile(bio, imageUrl);
+      await updateProfile(bio, imageUrl, githubUrl, telegramId, discordId);
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully",
@@ -104,9 +118,12 @@ const Profile = () => {
     xpProgress: user?.xpProgress || Math.floor(Math.random() * 100),
     verifiedEmail: user?.verifiedEmail || true,
     joinedDate: user?.created_at ? formatDate(user.created_at) : "Recently",
+    githubUrl: user?.github_url || "",
+    telegramId: user?.telegram_id || "",
+    discordId: user?.discord_id || "",
   };
 
-  // Modify the useEffect hook to prevent infinite queries
+  // Modify the useEffect hook to include address?.bech32Address in dependencies
   useEffect(() => {
     // Skip if conditions aren't right
     if (
@@ -152,7 +169,7 @@ const Profile = () => {
       controller.abort();
       fetchedRef.current = false;
     };
-  }, [isConnected, isAuthenticated]); // Remove address?.bech32Address from dependencies
+  }, [isConnected, isAuthenticated, address?.bech32Address]);
 
   // Redirect to home if not connected
   if (!isConnected || !isAuthenticated) {
@@ -317,6 +334,136 @@ const Profile = () => {
                     </Card>
 
                     <Card>
+                      <CardHeader>
+                        <CardTitle>Social Profiles</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {userData.githubUrl ? (
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start"
+                              asChild
+                            >
+                              <a
+                                href={userData.githubUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+                                  <path d="M9 18c-4.51 2-5-2-7-2" />
+                                </svg>
+                                GitHub |{" "}
+                                {userData.githubUrl.replace(
+                                  /^https?:\/\/github\.com\//,
+                                  ""
+                                )}
+                              </a>
+                            </Button>
+                          ) : null}
+
+                          {userData.telegramId ? (
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start"
+                              asChild
+                            >
+                              <a
+                                href={`https://t.me/${userData.telegramId.replace(
+                                  /^@/,
+                                  ""
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="m22 2-7 20-4-9-9-4Z" />
+                                  <path d="M22 2 11 13" />
+                                </svg>
+                                Telegram |{" "}
+                                {userData.telegramId.startsWith("@")
+                                  ? userData.telegramId
+                                  : `@${userData.telegramId}`}
+                              </a>
+                            </Button>
+                          ) : null}
+
+                          {userData.discordId ? (
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start"
+                              asChild
+                            >
+                              <a
+                                href={`https://discord.com/users/${
+                                  userData.discordId.split("#")[0]
+                                }`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <circle cx="9" cy="12" r="1" />
+                                  <circle cx="15" cy="12" r="1" />
+                                  <path d="M7.5 7.5c3.5-1 5.5-1 9 0" />
+                                  <path d="M7 16.5c3.5 1 6.5 1 10 0" />
+                                  <path d="M15.5 17c0 1 1.5 3 2 3 1.5 0 2-1.5 2-3 0-1.5-2-5.5-2-5.5 0 0-2 4-2 5.5z" />
+                                  <path d="M8.5 17c0 1-1.5 3-2 3-1.5 0-2-1.5-2-3 0-1.5 2-5.5 2-5.5 0 0 2 4 2 5.5z" />
+                                </svg>
+                                Discord | {userData.discordId}
+                              </a>
+                            </Button>
+                          ) : null}
+
+                          {!userData.githubUrl &&
+                          !userData.telegramId &&
+                          !userData.discordId ? (
+                            <div className="text-center text-muted-foreground py-4">
+                              No social profiles added yet. Edit your profile to
+                              add them.
+                            </div>
+                          ) : null}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
                       <CardHeader className="flex flex-row justify-between items-center">
                         <CardTitle>Recent Projects</CardTitle>
                         <Button variant="ghost" size="sm" asChild>
@@ -360,7 +507,11 @@ const Profile = () => {
                                 <div className="mt-2">
                                   <Button variant="ghost" size="sm" asChild>
                                     <Link
-                                      to={`/projects/${project.project_id}`}
+                                      to={
+                                        project.project_id
+                                          ? `/projects/${project.project_id}`
+                                          : "#"
+                                      }
                                     >
                                       View Project
                                     </Link>
@@ -409,7 +560,11 @@ const Profile = () => {
                                   <div className="mt-2">
                                     <Button variant="ghost" size="sm" asChild>
                                       <Link
-                                        to={`/projects/${project.project_id}`}
+                                        to={
+                                          project.project_id
+                                            ? `/projects/${project.project_id}`
+                                            : "#"
+                                        }
                                       >
                                         View Project
                                       </Link>
@@ -480,7 +635,13 @@ const Profile = () => {
                               </div>
                               <div className="mt-2">
                                 <Button variant="ghost" size="sm" asChild>
-                                  <Link to={`/projects/${project.project_id}`}>
+                                  <Link
+                                    to={
+                                      project.project_id
+                                        ? `/projects/${project.project_id}`
+                                        : "#"
+                                    }
+                                  >
                                     View Project
                                   </Link>
                                 </Button>
@@ -524,7 +685,13 @@ const Profile = () => {
                               </div>
                               <div className="mt-2">
                                 <Button variant="ghost" size="sm" asChild>
-                                  <Link to={`/projects/${project.project_id}`}>
+                                  <Link
+                                    to={
+                                      project.project_id
+                                        ? `/projects/${project.project_id}`
+                                        : "#"
+                                    }
+                                  >
                                     View Project
                                   </Link>
                                 </Button>
@@ -605,6 +772,9 @@ const Profile = () => {
         initialData={{
           about: user?.bio || "",
           imageUrl: user?.image_url || "",
+          githubUrl: user?.github_url || "",
+          telegramId: user?.telegram_id || "",
+          discordId: user?.discord_id || "",
         }}
         onSave={handleUpdateProfile}
       />

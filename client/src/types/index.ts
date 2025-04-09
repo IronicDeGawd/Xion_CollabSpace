@@ -1,13 +1,15 @@
 export interface User {
-  id?: number;
+  id: number;
   name: string;
   email: string;
   address: string;
   skills: string[];
+  bio?: string;
   image_url?: string;
   created_at?: string;
-  updated_at?: string;
-  bio?: string;
+  github_url?: string; // Add this property
+  telegram_id?: string; // Add this property
+  discord_id?: string; // Add this property
   xp?: number;
   xpProgress?: number;
   verifiedEmail?: boolean;
@@ -31,6 +33,7 @@ export interface ExtendedProject {
     owner?: string;
     type?: string;
     trust_level?: string;
+    is_paid?: boolean; // Add this field
   }
 
 export interface Project {
@@ -42,4 +45,5 @@ export interface Project {
     type?: string;
     trust_level?: string;
     created_at: string;
+    is_paid?: boolean; // Add this field
   }

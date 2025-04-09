@@ -22,6 +22,8 @@ import {
   Calendar,
   Filter,
   UserCircle,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProjectCardSkeleton } from "@/components/Loading";
@@ -47,6 +49,17 @@ import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import type { ExtendedProject } from "@/types/index";
 import { ProjectsSkeleton } from "@/components/loadingSkeletons/ProjectsSkeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type ExecuteResultOrUndefined = ExecuteResult | undefined;
 
@@ -91,10 +104,14 @@ const Projects = () => {
     skillsRequired: "",
     repositoryUrl: "",
     websiteUrl: "",
+    isPaid: false, // New field for paid status
   });
 
   const [executeResult, setExecuteResult] =
     useState<ExecuteResultOrUndefined>(undefined);
+
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 
@@ -279,6 +296,7 @@ const Projects = () => {
         title: formData.title,
         description: formData.description,
         skills_required: skillsArray,
+        is_paid: formData.isPaid, // Add the is_paid field required by the contract
       },
     };
 
@@ -294,7 +312,7 @@ const Projects = () => {
       setExecuteResult(res);
       console.log("On-chain transaction successful:", res);
 
-      // Get project ID from events
+      // Get project ID using the helper function instead of direct indexing
       const projectId = res.events[11].attributes[2].value;
 
       if (!projectId) {
@@ -313,6 +331,7 @@ const Projects = () => {
             repository_url: formData.repositoryUrl,
             website_url: formData.websiteUrl,
             status: "Open",
+            is_paid: formData.isPaid, // Add the is_paid field
           },
           {
             headers: {
@@ -333,6 +352,7 @@ const Projects = () => {
           skillsRequired: "",
           repositoryUrl: "",
           websiteUrl: "",
+          isPaid: false,
         });
 
         setIsCreateDialogOpen(false);
@@ -363,25 +383,78 @@ const Projects = () => {
     }
   };
 
-  // Helper function to extract project ID from transaction logs
-  const extractProjectIdFromEvents = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    logs: readonly any[] | undefined
-  ): string | null => {
-    if (!logs || logs.length === 0) return null;
-
-    // Search for the project_id attribute in the events
-    for (const log of logs) {
-      for (const event of log.events) {
-        for (const attribute of event.attributes) {
-          if (attribute.key === "project_id") {
-            return attribute.value;
-          }
-        }
-      }
+  const deleteProject = async (projectId: string) => {
+    if (!account || !client || !isAuthenticated) {
+      toast({
+        title: "Error",
+        description:
+          "You must be connected and authenticated to delete a project",
+        variant: "destructive",
+      });
+      return;
     }
 
-    return null;
+    setIsDeletingProject(true);
+
+    try {
+      // Step 1: Delete the project on-chain
+      const msg = {
+        DeleteProject: {
+          project_id: projectId,
+        },
+      };
+
+      const res = await client.execute(
+        account.bech32Address,
+        contractAddress,
+        msg,
+        "auto"
+      );
+
+      console.log("On-chain deletion successful:", res);
+
+      // Step 2: Delete the project from the database
+      try {
+        await axios.delete(
+          `${import.meta.env.VITE_API_URL}/api/projects/${projectId}`,
+          {
+            headers: {
+              "x-auth-token": token,
+            },
+          }
+        );
+
+        toast({
+          title: "Project deleted",
+          description: "Your project has been successfully deleted",
+        });
+
+        // Remove the project from the state
+        setProjects(projects.filter((p) => p.project_id !== projectId));
+      } catch (dbError) {
+        console.error("Database deletion error:", dbError);
+        toast({
+          title: "Warning",
+          description: "Project deleted on-chain but database cleanup failed",
+          variant: "warning",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast({
+        title: "Error deleting project",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingProject(false);
+      setProjectToDelete(null);
+    }
+  };
+
+  const isProjectOwner = (project: ExtendedProject) => {
+    return isAuthenticated && account?.bech32Address === project.owner_address;
   };
 
   return (
@@ -519,9 +592,52 @@ const Projects = () => {
                 className="card-hover border border-border overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/20 hover:translate-y-[-5px]"
               >
                 <CardHeader>
-                  <CardTitle className="text-foreground">
-                    {project.title}
-                  </CardTitle>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-foreground">
+                      {project.title}
+                    </CardTitle>
+                    {isProjectOwner(project) && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will
+                              permanently delete your project and remove your
+                              data from the blockchain.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteProject(project.project_id)}
+                              className="bg-red-500 hover:bg-red-600"
+                              disabled={isDeletingProject}
+                            >
+                              {isDeletingProject ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Deleting...
+                                </>
+                              ) : (
+                                "Delete Project"
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                   <CardDescription className="line-clamp-2">
                     {project.description}
                   </CardDescription>

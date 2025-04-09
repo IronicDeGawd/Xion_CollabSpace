@@ -16,6 +16,11 @@ router.post("/", auth, async (req, res) => {
       status,
     } = req.body;
 
+    // Validate project_id
+    if (!project_id || typeof project_id !== "string") {
+      return res.status(400).json({ error: "Invalid project ID" });
+    }
+
     // Check if project already exists
     const existingProject = await sql`
       SELECT * FROM project_details WHERE project_id = ${project_id}
@@ -368,7 +373,7 @@ router.post("/recover", auth, async (req, res) => {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    // For security, only allow owners to recover their own projects
+    // For security, only owners are allowed to recover their own projects
     if (project[0].owner_address !== req.user.address) {
       return res
         .status(403)
@@ -393,6 +398,47 @@ router.post("/recover", auth, async (req, res) => {
       error: "Server error during recovery",
       details: error instanceof Error ? error.message : "Unknown error",
     });
+  }
+});
+
+// Delete a project
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    const projectId = req.params.id;
+
+    // Verify project exists and user is the owner
+    const project = await sql`
+      SELECT * FROM project_details
+      WHERE project_id = ${projectId}
+    `;
+
+    if (project.length === 0) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    // Check if user is the owner
+    if (project[0].owner_address !== req.user.address) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this project" });
+    }
+
+    // Delete collaborator records first (foreign key constraint)
+    await sql`
+      DELETE FROM project_collaborators
+      WHERE project_id = ${projectId}
+    `;
+
+    // Delete the project
+    await sql`
+      DELETE FROM project_details
+      WHERE project_id = ${projectId}
+    `;
+
+    res.json({ message: "Project successfully deleted" });
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

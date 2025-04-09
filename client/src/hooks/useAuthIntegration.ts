@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAbstraxionAccount } from "@burnt-labs/abstraxion";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 interface FormData {
   name: string;
@@ -16,82 +16,85 @@ export const useAuthIntegration = () => {
   const { toast } = useToast();
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    email: '',
-    skills: '',
+    name: "",
+    email: "",
+    skills: "",
   });
   const navigate = useNavigate();
 
-  // Use a ref to track login attempts to prevent loops
   const loginAttemptedRef = useRef(false);
 
-  // Add a cleanup controller for fetch requests
+  // Reset login attempt when wallet changes
   useEffect(() => {
-    // Skip if conditions aren't right
-    if (!isConnected || !account?.bech32Address || isAuthenticated || loading || loginAttemptedRef.current) {
+    loginAttemptedRef.current = false;
+  }, [account?.bech32Address]);
+
+  useEffect(() => {
+    if (
+      !isConnected ||
+      !account?.bech32Address ||
+      isAuthenticated ||
+      loading ||
+      loginAttemptedRef.current
+    ) {
       return;
     }
 
-    // Set attempted flag immediately
     loginAttemptedRef.current = true;
-
-    // Create an AbortController for the login request
-    const controller = new AbortController();
 
     const handleLogin = async () => {
       try {
         const success = await login(account.bech32Address);
         if (success) {
           toast({
-            title: 'Login successful',
-            description: 'Welcome back!',
+            title: "Login successful",
+            description: "Welcome back!",
           });
+          navigate("/dashboard"); // optional: redirect on login
         } else {
           setRegistrationOpen(true);
         }
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return;
-        }
         console.error("Login error:", err);
         setRegistrationOpen(true);
       }
     };
 
     handleLogin();
-
-    return () => {
-      controller.abort();
-    };
-  }, [isConnected, account?.bech32Address, isAuthenticated]); // Remove loading from dependencies
+  }, [isConnected, account?.bech32Address, isAuthenticated, loading]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!account?.bech32Address) return;
 
-    try {
-      const skills = formData.skills
-        .split(',')
-        .map(skill => skill.trim())
-        .filter(skill => skill !== '');
+    const skills = formData.skills
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter((skill) => skill !== "");
 
-      await register(
+    try {
+      const success = await register(
         formData.name,
         formData.email,
         account.bech32Address,
         skills
       );
 
-      setRegistrationOpen(false);
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created!",
-      });
+      if (success) {
+        setRegistrationOpen(false);
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created!",
+        });
+        navigate("/dashboard"); // optional: redirect after registration
+      }
     } catch (error) {
-      console.error("Registration failed:", error);
+      const message =
+        error instanceof Error ? error.message : "An unknown error occurred";
+
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: message,
         variant: "destructive",
       });
     }

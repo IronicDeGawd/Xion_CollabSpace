@@ -30,7 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex w-full">
       <AppSidebar />
-      <div className="flex-1 flex flex-col w-full">
+      <div className="flex-1 flex flex-col">
         <header className="border-b p-4 bg-card flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm bg-opacity-90 w-full">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
@@ -91,8 +91,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 w-full overflow-x-hidden">
-          <div className="max-w-[1600px] mx-auto w-full">{children}</div>
+        <main className="flex-1 w-full p-4 md:p-6 overflow-auto">
+          {children}
         </main>
         <footer className="border-t py-4 px-6 text-center text-sm text-muted-foreground transition-opacity duration-300 hover:text-foreground w-full">
           <p>© 2025 CollabSpace - Connect, Collab, Create</p>

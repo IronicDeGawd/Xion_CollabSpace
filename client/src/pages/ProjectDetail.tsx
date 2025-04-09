@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +26,7 @@ import {
   Clock,
   GitBranch,
   Link2,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -42,6 +43,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ProjectDetailSkeleton } from "@/components/loadingSkeletons/ProjectDetailSkeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ProjectDetail {
   project_id: string;
@@ -56,6 +68,7 @@ interface ProjectDetail {
   status: string;
   created_at: string;
   collaborators: Collaborator[];
+  is_paid?: boolean;
 }
 
 interface Collaborator {
@@ -81,7 +94,11 @@ const ProjectDetail = () => {
   const [collaborationStatus, setCollaborationStatus] = useState<string | null>(
     null
   );
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const navigate = useNavigate();
   const { toast } = useToast();
+
+  const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -89,6 +106,12 @@ const ProjectDetail = () => {
         setError("Invalid project ID");
         setLoading(false);
         return;
+      }
+
+      // Check if project ID has the expected format
+      const validIdPattern = /^proj-\d+-\d+-\w+$/;
+      if (!validIdPattern.test(id) && !id.match(/^[a-zA-Z0-9-]+$/)) {
+        console.warn("Project ID doesn't match expected format:", id);
       }
 
       const cachedProject = sessionStorage.getItem(`project-${id}`);
@@ -144,6 +167,7 @@ const ProjectDetail = () => {
           collaborators: Array.isArray(response.data.collaborators)
             ? response.data.collaborators
             : [],
+          is_paid: response.data.is_paid || false,
         };
 
         setProject(projectData);
@@ -354,10 +378,79 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!account || !client || !isAuthenticated || !project) {
+      toast({
+        title: "Error",
+        description: "Could not delete project. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeletingProject(true);
+
+    try {
+      // Step 1: Delete the project on-chain
+      const msg = {
+        DeleteProject: {
+          project_id: project.project_id,
+        },
+      };
+
+      const res = await client.execute(
+        account.bech32Address,
+        contractAddress,
+        msg,
+        "auto"
+      );
+
+      console.log("On-chain deletion successful:", res);
+
+      // Step 2: Delete the project from the database
+      try {
+        await axios.delete(
+          `${import.meta.env.VITE_API_URL}/api/projects/${id}`,
+          {
+            headers: {
+              "x-auth-token": token,
+            },
+          }
+        );
+
+        toast({
+          title: "Project deleted",
+          description: "Your project has been successfully deleted",
+        });
+
+        // Redirect to projects list
+        navigate("/projects");
+      } catch (dbError) {
+        console.error("Database deletion error:", dbError);
+        toast({
+          title: "Warning",
+          description: "Project deleted on-chain but database cleanup failed",
+          variant: "warning",
+        });
+        navigate("/projects");
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast({
+        title: "Error deleting project",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingProject(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
-        <div className="w-full">
+        <div className="container max-w-6xl mx-auto px-4 sm:px-6">
           <ProjectDetailSkeleton />
         </div>
       </Layout>
@@ -367,16 +460,18 @@ const ProjectDetail = () => {
   if (error || !project) {
     return (
       <Layout>
-        <div className="w-full">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold">Error</h2>
-            <p className="text-muted-foreground mt-2">
-              {error || "Project not found"}
-            </p>
-            <Button className="mt-4" asChild>
-              <Link to="/projects">Back to Projects</Link>
-            </Button>
-          </div>
+        <div className="container max-w-6xl mx-auto px-4 sm:px-6">
+          <Card className="my-8">
+            <CardContent className="text-center py-12">
+              <h2 className="text-2xl font-bold">Error</h2>
+              <p className="text-muted-foreground mt-2">
+                {error || "Project not found"}
+              </p>
+              <Button className="mt-4" asChild>
+                <Link to="/projects">Back to Projects</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
@@ -392,7 +487,7 @@ const ProjectDetail = () => {
 
   return (
     <Layout>
-      <div className="w-full">
+      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="mb-6 animate-in fade-in-50 slide-in-from-top-5 duration-300">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -457,6 +552,43 @@ const ProjectDetail = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              )}
+
+              {isOwner && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="flex items-center gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Project
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently
+                        delete your project and remove your data from the
+                        blockchain.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteProject}
+                        disabled={isDeletingProject}
+                      >
+                        {isDeletingProject ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Delete"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
 
               {canRequestToJoin && (
@@ -543,6 +675,24 @@ const ProjectDetail = () => {
                           <Badge key={skill}>{skill}</Badge>
                         ))}
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="transition-all duration-300 hover:shadow-md hover:border-primary/20">
+                    <CardHeader>
+                      <CardTitle>Project Type</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge
+                        variant={project.is_paid ? "default" : "secondary"}
+                      >
+                        {project.is_paid ? "Paid Project" : "Free Project"}
+                      </Badge>
+                      {project.is_paid && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          This project offers compensation to contributors
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 

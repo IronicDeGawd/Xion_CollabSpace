@@ -101,31 +101,42 @@ router.post("/login", async (req, res) => {
 // @route   GET api/auth
 router.get("/", auth, async (req, res) => {
   try {
-    const result = await sql`
-      SELECT id, name, email, address, skills
-      FROM users
-      WHERE id = ${req.user.id}
+    // Get user WITH profile data
+    const user = await sql`
+      SELECT u.id, u.name, u.email, u.address, u.skills, u.created_at,
+             p.about as bio, p.image_url, p.github_url, p.telegram_id, p.discord_id
+      FROM users u
+      LEFT JOIN user_profiles p ON u.id = p.user_id
+      WHERE u.id = ${req.user.id}
     `;
 
-    if (result.length === 0) {
+    if (user.length === 0) {
       return res.status(404).json({ msg: "User not found" });
     }
 
-    // Parse skills if they're stored as JSON string
-    const user = result[0];
-    if (user.skills && typeof user.skills === "string") {
+    // Ensure fields aren't missing
+    const userData = user[0];
+    userData.bio = userData.bio || null;
+    userData.image_url = userData.image_url || null;
+    userData.github_url = userData.github_url || null;
+    userData.telegram_id = userData.telegram_id || null;
+    userData.discord_id = userData.discord_id || null;
+
+    // Parse skills
+    if (userData.skills && typeof userData.skills === "string") {
       try {
-        user.skills = JSON.parse(user.skills);
+        userData.skills = JSON.parse(userData.skills);
       } catch (e) {
-        // If parsing fails, try to split by comma
-        user.skills = user.skills.split(",").map((s) => s.trim());
+        userData.skills = userData.skills.split(",").map((s) => s.trim());
       }
+    } else if (!userData.skills) {
+      userData.skills = [];
     }
 
-    res.json(user);
+    res.json(userData);
   } catch (err) {
-    console.error("Fetch user error:", err.message);
-    res.status(500).send("Server error");
+    console.error(err.message);
+    res.status(500).send("Server Error");
   }
 });
 

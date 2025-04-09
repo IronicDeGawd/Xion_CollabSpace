@@ -7,6 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+.gitignore
+
 .readme.md
 contract/xp_tracking
 
@@ -56,3 +58,5 @@ tarpaulin-report.*
 
 # raw json schema files
 **/raw/*.json
+
+.env

@@ -21,6 +21,7 @@ interface ProjectFormData {
   skillsRequired: string;
   repositoryUrl?: string;
   websiteUrl?: string;
+  isPaid: boolean; // Add this field
 }
 
 interface ProjectFormDialogProps {
@@ -42,6 +43,19 @@ export default function ProjectFormDialog({
   handleChange,
   loading,
 }: ProjectFormDialogProps) {
+  // Add this helper function to handle boolean value changes
+  const handleBooleanChange = (name: string, value: boolean) => {
+    const syntheticEvent = {
+      target: {
+        name,
+        value,
+        type: "checkbox", // Type needed for proper event handling
+      },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    handleChange(syntheticEvent);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-card transition-all duration-300 animate-in fade-in-50 slide-in-from-bottom-10">
@@ -121,6 +135,54 @@ export default function ProjectFormDialog({
                   placeholder="https://your-project.com"
                   className="pl-10 bg-input text-foreground transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="projectType">Project Type</Label>
+              <div className="flex items-center space-x-4 rounded-md border p-4">
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="free"
+                      name="isPaid"
+                      className="mr-2"
+                      checked={!formData.isPaid}
+                      onChange={() => handleBooleanChange("isPaid", false)}
+                    />
+                    <Label htmlFor="free" className="font-medium">
+                      Free Project
+                    </Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Volunteer-based collaboration with no financial compensation
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 rounded-md border p-4 opacity-60 cursor-not-allowed">
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="paid"
+                      name="isPaid"
+                      className="mr-2"
+                      checked={formData.isPaid}
+                      disabled
+                    />
+                    <Label htmlFor="paid" className="font-medium">
+                      Paid Project
+                    </Label>
+                    <span className="ml-2 rounded-full bg-secondary text-xs px-2 py-1">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Compensate contributors with payments (Feature coming in
+                    future version)
+                  </p>
+                </div>
               </div>
             </div>
           </div>

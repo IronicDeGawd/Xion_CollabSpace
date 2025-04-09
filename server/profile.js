@@ -8,10 +8,9 @@ const auth = require("./middleware/auth");
 // @access  Private
 router.get("/", auth, async (req, res) => {
   try {
-    // Get user data from users table
     const userResult = await sql`
       SELECT u.id, u.name, u.email, u.address, u.skills, u.created_at,
-             p.about, p.image_url
+             p.about as bio, p.image_url, p.github_url, p.telegram_id, p.discord_id
       FROM users u
       LEFT JOIN user_profiles p ON u.id = p.user_id
       WHERE u.id = ${req.user.id}
@@ -45,7 +44,7 @@ router.get("/", auth, async (req, res) => {
 // @desc    Update user profile
 // @access  Private
 router.put("/", auth, async (req, res) => {
-  const { about, imageUrl } = req.body;
+  const { bio, imageUrl, githubUrl, telegramId, discordId } = req.body;
   console.log("route: /profile, method : put");
 
   try {
@@ -56,15 +55,32 @@ router.put("/", auth, async (req, res) => {
 
     if (profileCheck.length === 0) {
       await sql`
-        INSERT INTO user_profiles (user_id, about, image_url)
-        VALUES (${req.user.id}, ${about}, ${imageUrl})
+        INSERT INTO user_profiles (
+          user_id,
+          about,
+          image_url,
+          github_url,
+          telegram_id,
+          discord_id
+        )
+        VALUES (
+          ${req.user.id},
+          ${bio},
+          ${imageUrl},
+          ${githubUrl},
+          ${telegramId},
+          ${discordId}
+        )
       `;
     } else {
       // Update existing profile
       await sql`
         UPDATE user_profiles
-        SET about = ${about},
+        SET about = ${bio},
             image_url = ${imageUrl},
+            github_url = ${githubUrl},
+            telegram_id = ${telegramId},
+            discord_id = ${discordId},
             updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ${req.user.id}
       `;
@@ -73,7 +89,7 @@ router.put("/", auth, async (req, res) => {
     // Return updated profile
     const updatedProfile = await sql`
       SELECT u.id, u.name, u.email, u.address, u.skills, u.created_at,
-             p.about, p.image_url
+             p.about as bio, p.image_url, p.github_url, p.telegram_id, p.discord_id
       FROM users u
       LEFT JOIN user_profiles p ON u.id = p.user_id
       WHERE u.id = ${req.user.id}
