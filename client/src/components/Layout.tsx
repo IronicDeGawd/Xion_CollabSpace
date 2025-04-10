@@ -11,8 +11,11 @@ import {
   useAbstraxionAccount,
   useAbstraxionSigningClient,
   useModal,
+  Abstraxion,
 } from "@burnt-labs/abstraxion";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthIntegration } from "@/hooks/useAuthIntegration";
+import RegistrationDialog from "@/components/RegistrationDialog";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,9 +24,17 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { data: account, isConnecting, isConnected } = useAbstraxionAccount();
   const { logout: disconnect } = useAbstraxionSigningClient();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const location = useLocation();
-  const [, setShowModal] = useModal();
+  const [showModal, setShowModal] = useModal();
+
+  const {
+    registrationOpen,
+    setRegistrationOpen,
+    formData,
+    setFormData,
+    handleRegister,
+  } = useAuthIntegration();
 
   const connectWallet = () => {
     setShowModal(true);
@@ -76,15 +87,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Disconnect</span>
                 </Button>
-                <Link to="/profile">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full bg-muted transition-all duration-300 hover:bg-primary/20 hover:scale-110"
-                  >
-                    <User className="h-4 w-4" />
-                  </Button>
-                </Link>
+                {isAuthenticated && (
+                  <Link to="/profile">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full bg-muted transition-all duration-300 hover:bg-primary/20 hover:scale-110"
+                    >
+                      <User className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
             ) : (
               <Button
@@ -105,6 +118,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <p>© 2025 CollabSpace - Connect, Collab, Create</p>
         </footer>
       </div>
+
+      {/* Abstraxion Modal */}
+      <Abstraxion onClose={() => setShowModal(false)} />
+
+      {/* Registration Dialog */}
+      {account && (
+        <RegistrationDialog
+          open={registrationOpen}
+          onOpenChange={setRegistrationOpen}
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleRegister}
+          address={account.bech32Address}
+        />
+      )}
     </div>
   );
 };
