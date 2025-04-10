@@ -12,6 +12,7 @@ import {
   useAbstraxionSigningClient,
   useModal,
 } from "@burnt-labs/abstraxion";
+import { useAuth } from "@/context/AuthContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,12 +20,18 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { data: account, isConnecting, isConnected } = useAbstraxionAccount();
-  const { logout } = useAbstraxionSigningClient();
+  const { logout: disconnect } = useAbstraxionSigningClient();
+  const { logout } = useAuth();
   const location = useLocation();
   const [, setShowModal] = useModal();
 
   const connectWallet = () => {
     setShowModal(true);
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    logout();
   };
 
   return (
@@ -63,7 +70,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={logout}
+                  onClick={handleDisconnect}
                   className="flex items-center gap-2"
                 >
                   <LogOut className="h-4 w-4" />
@@ -91,7 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
           </div>
         </header>
-        <main className="flex-1 w-full p-4 md:p-6 overflow-auto">
+        <main className="flex-1 w-[1650px] p-4 md:p-6 overflow-auto">
           {children}
         </main>
         <footer className="border-t py-4 px-6 text-center text-sm text-muted-foreground transition-opacity duration-300 hover:text-foreground w-full">

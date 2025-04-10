@@ -201,7 +201,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("cached_user");
+    localStorage.removeItem("cached_user_time");
     setToken(null);
+
+    // Redirect to root page
+    window.location.href = "/";
   };
 
   const updateProfile = async (
