@@ -21,7 +21,7 @@ interface ProjectFormData {
   skillsRequired: string;
   repositoryUrl?: string;
   websiteUrl?: string;
-  isPaid: boolean; // Add this field
+  isPaid: boolean;
 }
 
 interface ProjectFormDialogProps {
@@ -49,7 +49,7 @@ export default function ProjectFormDialog({
       target: {
         name,
         value,
-        type: "checkbox", // Type needed for proper event handling
+        type: "checkbox",
       },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 

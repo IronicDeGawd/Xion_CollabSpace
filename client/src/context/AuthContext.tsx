@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(null);
       setLoading(false);
     }
-  }, [token]); // Remove loadUser from dependencies
+  }, [token]);
 
   const login = async (address: string): Promise<boolean> => {
     try {
@@ -235,10 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      // Update user state with returned data
       setUser(res.data);
-
-      // Force a full reload of user data to ensure consistency
       await loadUser();
 
       setError(null);

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Shimmer } from "@/components/Loading";
+import { Shimmer } from "@/components/Shimmer";
 
 export const DashboardSkeleton = () => {
   return (

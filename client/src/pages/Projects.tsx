@@ -26,7 +26,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ProjectCardSkeleton } from "@/components/Loading";
 import {
   Sheet,
   SheetContent,

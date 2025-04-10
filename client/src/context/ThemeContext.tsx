@@ -10,14 +10,10 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  // Initialize theme state with a callback to avoid repeated calculations
   const [theme, setTheme] = useState<Theme>(() => {
-    // For SSR safety, check if window exists
     if (typeof window !== "undefined") {
       // Check for saved theme preference
       const savedTheme = localStorage.getItem("theme") as Theme;
-
-      // If valid saved theme exists, use it
       if (savedTheme === "light" || savedTheme === "dark") {
         return savedTheme;
       }
@@ -29,7 +25,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       return prefersDark ? "dark" : "light";
     }
 
-    return "light"; // Default theme
+    return "dark";
   });
 
   useEffect(() => {
@@ -40,7 +36,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem("theme")) {
-        // Only auto-switch if user hasn't explicitly set a preference
         setTheme(e.matches ? "dark" : "light");
       }
     };

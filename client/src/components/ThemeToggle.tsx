@@ -2,7 +2,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast"; // Fix import path
+import { useToast } from "@/components/ui/use-toast";
 
 export const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();

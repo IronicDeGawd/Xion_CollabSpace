@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import Ideas from "./pages/Ideas";
 import ProjectDetail from "./pages/ProjectDetail";
+import Timeline from "./pages/Timeline"; // Add this import
 import PrivateRoute from "./components/PrivateRoute";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -40,6 +41,7 @@ const AppRoutes = () => {
         <Route path="/projects" element={<Projects />} />
         <Route path="/ideas" element={<Ideas />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/timeline" element={<Timeline />} /> {/* Add this route */}
         <Route
           path="/profile"
           element={

@@ -15,11 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, User, Mail, Code, Wallet } from "lucide-react";
 
-// Changed the interface to use string for skills
 export interface RegistrationFormData {
   name: string;
   email: string;
-  skills: string; // Changed from string[] to string
+  skills: string;
 }
 
 interface RegistrationDialogProps {
@@ -52,7 +51,6 @@ const RegistrationDialog: React.FC<RegistrationDialogProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate a slight delay for better UX
     setTimeout(() => {
       onSubmit(e);
       setIsSubmitting(false);

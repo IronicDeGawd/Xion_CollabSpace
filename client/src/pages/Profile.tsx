@@ -61,7 +61,6 @@ const Profile = () => {
 
   // Manage loading state based on auth status
   useEffect(() => {
-    // Only show loading if we're connected and have a token but user data is still loading
     if (isConnected && localStorage.getItem("token") && !user) {
       setLoading(true);
     } else {
@@ -92,6 +91,7 @@ const Profile = () => {
     discordId?: string
   ) => {
     try {
+      setLoading(true);
       await updateProfile(bio, imageUrl, githubUrl, telegramId, discordId);
       toast({
         title: "Profile Updated",
@@ -103,6 +103,11 @@ const Profile = () => {
         description: "Could not update your profile",
         variant: "destructive",
       });
+    } finally {
+      // Wait a moment before turning off loading to ensure data is refreshed
+      setTimeout(() => {
+        setLoading(false);
+      }, 300);
     }
   };
 
@@ -190,10 +195,12 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="w-full max-w-full mx-auto">
-        {loading ? (
+      {loading ? (
+        <div className="w-full max-w-full mx-auto">
           <ProfileSkeleton />
-        ) : (
+        </div>
+      ) : (
+        <div className="w-full max-w-full mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Profile Sidebar */}
             <div className="lg:col-span-1">
@@ -764,8 +771,8 @@ const Profile = () => {
               </Tabs>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <ProfileEditDialog
         open={isEditProfileOpen}
         onOpenChange={setIsEditProfileOpen}

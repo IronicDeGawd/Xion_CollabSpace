@@ -50,7 +50,7 @@ export const useAuthIntegration = () => {
             title: "Login successful",
             description: "Welcome back!",
           });
-          navigate("/dashboard"); // optional: redirect on login
+          navigate("/dashboard");
         } else {
           setRegistrationOpen(true);
         }
@@ -86,7 +86,7 @@ export const useAuthIntegration = () => {
           title: "Registration successful",
           description: "Your account has been created!",
         });
-        navigate("/dashboard"); // optional: redirect after registration
+        navigate("/dashboard");
       }
     } catch (error) {
       const message =

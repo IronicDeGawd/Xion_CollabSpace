@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Plus,
+  Clock,
   Search,
   ThumbsUp,
   MessageSquare,
@@ -197,9 +198,15 @@ const Ideas = () => {
       <div className="w-full max-w-full mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-in fade-in-50 slide-in-from-top-5 duration-300">
           <div>
-            <h1 className="text-3xl font-bold">
-              Project Ideas [Work in Progress]
-            </h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">Project Ideas</h1>
+              <Badge className="bg-amber-500/20 text-amber-500 border border-amber-500/50 hover:bg-amber-500/30 animate-pulse-slow py-1 px-3">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  Work in Progress
+                </span>
+              </Badge>
+            </div>
             <p className="text-muted-foreground">
               Browse and submit ideas for future Web3 projects
             </p>

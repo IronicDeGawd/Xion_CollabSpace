@@ -4,7 +4,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Shimmer } from "@/components/Loading";
+import { Shimmer } from "@/components/Shimmer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const ProjectsSkeleton = () => {

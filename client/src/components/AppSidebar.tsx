@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   ExternalLink,
   GitBranch,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,11 @@ export function AppSidebar() {
       title: "Ideas",
       path: "/ideas",
       icon: Lightbulb,
+    },
+    {
+      title: "Roadmap",
+      path: "/timeline",
+      icon: Clock,
     },
   ];
 

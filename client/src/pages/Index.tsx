@@ -17,6 +17,9 @@ import {
   Globe,
   Shield,
   Sparkles,
+  CheckSquare,
+  Rocket,
+  Check,
 } from "lucide-react";
 import {
   Abstraxion,
@@ -311,6 +314,72 @@ const Index = () => {
           </div>
         </section>
 
+        {/* XION Technology Section - New */}
+        <section className="py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4 gradient-text">
+              Powered by XION
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              CollabSpace leverages XION's blockchain technology for seamless
+              Web3 experiences
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="bg-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:translate-y-[-5px] group">
+              <div className="h-2 bg-gradient-to-r from-web3-primary to-web3-accent"></div>
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-web3-primary/10 rounded-lg flex items-center justify-center mb-4 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:bg-web3-primary/20">
+                  <Shield className="h-6 w-6 text-web3-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Account Abstraction</h3>
+                <p className="text-muted-foreground">
+                  Connect seamlessly without managing seed phrases or private
+                  keys, making Web3 accessible to everyone.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:translate-y-[-5px] group">
+              <div className="h-2 bg-gradient-to-r from-web3-primary to-web3-accent"></div>
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-web3-primary/10 rounded-lg flex items-center justify-center mb-4 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:bg-web3-primary/20">
+                  <CheckSquare className="h-6 w-6 text-web3-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">On-chain Identity</h3>
+                <p className="text-muted-foreground">
+                  Establish trust with verifiable credentials and reputation
+                  stored securely on the XION blockchain.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:translate-y-[-5px] group">
+              <div className="h-2 bg-gradient-to-r from-web3-primary to-web3-accent"></div>
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-web3-primary/10 rounded-lg flex items-center justify-center mb-4 transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 group-hover:bg-web3-primary/20">
+                  <Zap className="h-6 w-6 text-web3-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Gasless Transactions</h3>
+                <p className="text-muted-foreground">
+                  Interact with the platform seamlessly without worrying about
+                  gas fees for basic operations.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-10 flex items-center justify-center">
+            <Button variant="outline" asChild className="group">
+              <Link to="/timeline" className="flex items-center gap-2">
+                Learn more about CollabSpace's technology
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+
         {/* Benefits Section */}
         <section className="py-16">
           <div className="text-center mb-12">
@@ -369,6 +438,156 @@ const Index = () => {
                 </p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Subscription Plans Section - New */}
+        <section className="py-16 bg-gradient-to-b from-background to-background/80 rounded-3xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4 gradient-text">
+              Subscription Plans
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Choose the right plan for your collaboration needs
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:translate-y-[-5px]">
+              <div className="h-2 bg-primary/20"></div>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-primary">Free</span>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Free Tier</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Basic access for individual developers
+                </p>
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Browse up to 10 projects per day
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Submit 1 project idea per week
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Basic profile
+                    </span>
+                  </li>
+                </ul>
+                <Button
+                  className="w-full bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary"
+                  variant="outline"
+                >
+                  Get Started Free
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:translate-y-[-5px] border-web3-primary/50 shadow-md shadow-web3-primary/10 scale-105 md:scale-110 z-10">
+              <div className="h-2 bg-gradient-to-r from-web3-primary to-web3-accent"></div>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 bg-web3-primary/20 rounded-lg flex items-center justify-center">
+                    <Code className="h-6 w-6 text-web3-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-web3-primary">
+                    15 XION / month
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Developer Pro</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Enhanced features for serious contributors
+                </p>
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-web3-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Unlimited project browsing
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-web3-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Enhanced profile with portfolio
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-web3-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Priority application for projects
+                    </span>
+                  </li>
+                </ul>
+                <Button className="w-full bg-web3-primary hover:bg-web3-primary/90">
+                  Subscribe Now
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:translate-y-[-5px]">
+              <div className="h-2 bg-primary/20"></div>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Rocket className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-primary">
+                    50 XION / month
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Project Creator</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  For teams recruiting talent
+                </p>
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Post unlimited projects
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Team management dashboard
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Advanced applicant filtering
+                    </span>
+                  </li>
+                </ul>
+                <Button
+                  className="w-full bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary"
+                  variant="outline"
+                >
+                  Subscribe Now
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-10 flex items-center justify-center">
+            <Button variant="outline" asChild className="group">
+              <Link to="/timeline" className="flex items-center gap-2">
+                See all subscription details
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+            </Button>
           </div>
         </section>
 
