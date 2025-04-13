@@ -59,7 +59,6 @@ const Index = () => {
   return (
     <Layout>
       <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
-        {/* Hero Section - Redesigned with image */}
         <section className="py-16 md:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8 animate-in fade-in-50 slide-in-from-left-10 duration-700">
@@ -142,7 +141,7 @@ const Index = () => {
         </section>
 
         {/* Problem Section */}
-        <section className="py-16 bg-gradient-to-b from-background to-background/80 rounded-3xl">
+        <section className="py-16 bg-gradient-to-b from-background to-background/80 rounded-3xl ">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4 gradient-text">
               The Problem

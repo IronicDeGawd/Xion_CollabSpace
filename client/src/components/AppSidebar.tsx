@@ -69,7 +69,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="py-4">
         <div className="flex items-center justify-center transition-transform duration-300 hover:scale-105">
-          <GitBranch className="h-6 w-6 text-primary" />
+          <GitBranch className="h-8 w-8 text-primary" />
           <span className="ml-2 text-xl font-bold text-primary">
             CollabSpace
           </span>

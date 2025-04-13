@@ -7,9 +7,9 @@ export interface User {
   bio?: string;
   image_url?: string;
   created_at?: string;
-  github_url?: string; // Add this property
-  telegram_id?: string; // Add this property
-  discord_id?: string; // Add this property
+  github_url?: string;
+  telegram_id?: string;
+  discord_id?: string;
   xp?: number;
   xpProgress?: number;
   verifiedEmail?: boolean;
@@ -33,7 +33,7 @@ export interface ExtendedProject {
     owner?: string;
     type?: string;
     trust_level?: string;
-    is_paid?: boolean; // Add this field
+    is_paid?: boolean;
   }
 
 export interface Project {
@@ -45,5 +45,5 @@ export interface Project {
     type?: string;
     trust_level?: string;
     created_at: string;
-    is_paid?: boolean; // Add this field
+    is_paid?: boolean;
   }

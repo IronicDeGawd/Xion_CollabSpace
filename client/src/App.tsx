@@ -18,7 +18,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "@burnt-labs/abstraxion/dist/index.css";
 import "@burnt-labs/ui/dist/index.css";
-import React from "react";
 
 const queryClient = new QueryClient();
 
@@ -72,7 +71,7 @@ const App = () => (
           <SidebarProvider>
             <TooltipProvider>
               <BrowserRouter>
-                <div className="app-container">
+                <div className="app-container w-full">
                   <AppRoutes />
                 </div>
                 <Toaster />
